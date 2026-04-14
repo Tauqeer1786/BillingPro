@@ -1,0 +1,32 @@
+{
+  "version": "1.0",
+  "exportedAt": "2026-04-14T05:43:16.551Z",
+  "autoBackup": true,
+  "products": [
+    {
+      "id": 9,
+      "name": "Test Item",
+      "costPrice": 100,
+      "marginPercent": 20,
+      "sellingPrice": 120,
+      "gstPercent": 18,
+      "stock": 48,
+      "hsn": null,
+      "unit": "pcs",
+      "createdAt": "2026-04-14T05:40:27.000Z"
+    }
+  ],
+  "customers": [
+    {
+      "id": 9,
+      "name": "Test Customer",
+      "phone": "9876543210",
+      "email": "test@example.com",
+      "address": null,
+      "gstin": null,
+      "createdAt": "2026-04-14T05:40:27.000Z"
+    }
+  ],
+  "invoices": [],
+  "invoiceItems": []
+}
