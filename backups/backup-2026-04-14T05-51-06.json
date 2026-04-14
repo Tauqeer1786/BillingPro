@@ -1,0 +1,169 @@
+{
+  "version": "1.0",
+  "exportedAt": "2026-04-14T05:51:06.075Z",
+  "autoBackup": true,
+  "products": [
+    {
+      "id": 9,
+      "name": "Test Item",
+      "costPrice": 100,
+      "marginPercent": 20,
+      "sellingPrice": 120,
+      "gstPercent": 18,
+      "stock": 31,
+      "hsn": null,
+      "unit": "pcs",
+      "createdAt": "2026-04-14T05:45:22.000Z"
+    },
+    {
+      "id": 10,
+      "name": "soap",
+      "costPrice": 120,
+      "marginPercent": 10,
+      "sellingPrice": 132,
+      "gstPercent": 18,
+      "stock": 98,
+      "hsn": null,
+      "unit": "pcs",
+      "createdAt": "2026-04-14T05:47:53.000Z"
+    }
+  ],
+  "customers": [
+    {
+      "id": 9,
+      "name": "Test Customer",
+      "phone": "9876543210",
+      "email": "test@example.com",
+      "address": null,
+      "gstin": null,
+      "createdAt": "2026-04-14T05:45:22.000Z"
+    },
+    {
+      "id": 10,
+      "name": "T1",
+      "phone": null,
+      "email": null,
+      "address": null,
+      "gstin": null,
+      "createdAt": "2026-04-14T05:48:19.000Z"
+    }
+  ],
+  "invoices": [
+    {
+      "id": 3,
+      "invoiceNumber": "INV-2026-2027-0001",
+      "customerId": 9,
+      "date": "2026-04-14",
+      "subtotal": 600,
+      "totalGst": 108,
+      "totalDiscount": 0,
+      "grandTotal": 708,
+      "totalProfit": 100,
+      "notes": null,
+      "createdAt": "2026-04-14T05:45:22.000Z"
+    },
+    {
+      "id": 4,
+      "invoiceNumber": "INV-2026-2027-0002",
+      "customerId": 10,
+      "date": "2026-04-14",
+      "subtotal": 1445.4,
+      "totalGst": 260.17,
+      "totalDiscount": 6.6,
+      "grandTotal": 1705.57,
+      "totalProfit": 225.4,
+      "notes": null,
+      "createdAt": "2026-04-14T05:49:18.000Z"
+    },
+    {
+      "id": 5,
+      "invoiceNumber": "INV-2026-2027-0003",
+      "customerId": 9,
+      "date": "2025-04-13",
+      "subtotal": 252,
+      "totalGst": 45.36,
+      "totalDiscount": 0,
+      "grandTotal": 297.36,
+      "totalProfit": 32,
+      "notes": null,
+      "createdAt": "2026-04-14T05:50:18.000Z"
+    }
+  ],
+  "invoiceItems": [
+    {
+      "id": 4,
+      "invoiceId": 3,
+      "productId": 9,
+      "productName": "Test Item",
+      "quantity": 5,
+      "unitPrice": 120,
+      "costPrice": 100,
+      "gstPercent": 18,
+      "gstAmount": 108,
+      "discountPercent": 0,
+      "discountAmount": 0,
+      "totalAmount": 708,
+      "profit": 100
+    },
+    {
+      "id": 5,
+      "invoiceId": 4,
+      "productId": 10,
+      "productName": "soap",
+      "quantity": 1,
+      "unitPrice": 132,
+      "costPrice": 120,
+      "gstPercent": 18,
+      "gstAmount": 22.57,
+      "discountPercent": 5,
+      "discountAmount": 6.6,
+      "totalAmount": 147.97,
+      "profit": 5.4
+    },
+    {
+      "id": 6,
+      "invoiceId": 4,
+      "productId": 9,
+      "productName": "Test Item",
+      "quantity": 11,
+      "unitPrice": 120,
+      "costPrice": 100,
+      "gstPercent": 18,
+      "gstAmount": 237.6,
+      "discountPercent": 0,
+      "discountAmount": 0,
+      "totalAmount": 1557.6,
+      "profit": 220
+    },
+    {
+      "id": 7,
+      "invoiceId": 5,
+      "productId": 10,
+      "productName": "soap",
+      "quantity": 1,
+      "unitPrice": 132,
+      "costPrice": 120,
+      "gstPercent": 18,
+      "gstAmount": 23.76,
+      "discountPercent": 0,
+      "discountAmount": 0,
+      "totalAmount": 155.76,
+      "profit": 12
+    },
+    {
+      "id": 8,
+      "invoiceId": 5,
+      "productId": 9,
+      "productName": "Test Item",
+      "quantity": 1,
+      "unitPrice": 120,
+      "costPrice": 100,
+      "gstPercent": 18,
+      "gstAmount": 21.6,
+      "discountPercent": 0,
+      "discountAmount": 0,
+      "totalAmount": 141.6,
+      "profit": 20
+    }
+  ]
+}
