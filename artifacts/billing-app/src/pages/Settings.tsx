@@ -1,21 +1,99 @@
 import { useState } from "react";
-import { useExportDatabase, useImportDatabase } from "@workspace/api-client-react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useExportDatabase, useImportDatabase, customFetch } from "@workspace/api-client-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Download, Upload, Database } from "lucide-react";
+import {
+  Download,
+  Upload,
+  Database,
+  RefreshCw,
+  Trash2,
+  Clock,
+  HardDrive,
+  FolderOpen,
+  RotateCcw,
+  Zap,
+} from "lucide-react";
+
+interface AutoBackupFile {
+  filename: string;
+  createdAt: string;
+  sizeBytes: number;
+}
+
+interface AutoBackupsResponse {
+  backups: AutoBackupFile[];
+  backupDir: string;
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+}
+
+function useAutoBackups() {
+  return useQuery<AutoBackupsResponse>({
+    queryKey: ["auto-backups"],
+    queryFn: () => customFetch<AutoBackupsResponse>("/api/backup/auto-backups"),
+    refetchInterval: 30_000,
+  });
+}
+
+function useTriggerBackup() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      customFetch<{ success: boolean; filename: string }>("/api/backup/auto-backups/trigger", {
+        method: "POST",
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["auto-backups"] });
+    },
+  });
+}
+
+function useDeleteBackup() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (filename: string) =>
+      customFetch(`/api/backup/auto-backups/${encodeURIComponent(filename)}`, {
+        method: "DELETE",
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["auto-backups"] });
+    },
+  });
+}
 
 export function Settings() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [importing, setImporting] = useState(false);
+  const [restoringFile, setRestoringFile] = useState<string | null>(null);
 
-  const { data: exportData, refetch: fetchExport, isFetching: isExporting } = useExportDatabase({
+  const { refetch: fetchExport, isFetching: isExporting } = useExportDatabase({
     query: { enabled: false },
   });
 
   const importMutation = useImportDatabase();
+  const { data: autoBackupsData, isLoading: isLoadingBackups, refetch: refetchBackups, isFetching: isRefetchingBackups } = useAutoBackups();
+  const triggerBackup = useTriggerBackup();
+  const deleteBackup = useDeleteBackup();
 
   async function handleExport() {
     try {
@@ -63,6 +141,62 @@ export function Settings() {
     input.click();
   }
 
+  async function handleTriggerBackup() {
+    try {
+      const result = await triggerBackup.mutateAsync();
+      toast({ title: "Backup created", description: `Saved as ${result.filename}` });
+    } catch {
+      toast({ title: "Backup failed", variant: "destructive" });
+    }
+  }
+
+  async function handleDownloadAutoBackup(filename: string) {
+    try {
+      const response = await fetch(`/api/backup/auto-backups/${encodeURIComponent(filename)}`);
+      if (!response.ok) throw new Error("Failed to download");
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast({ title: "Download started", description: filename });
+    } catch {
+      toast({ title: "Download failed", variant: "destructive" });
+    }
+  }
+
+  async function handleRestoreAutoBackup(filename: string) {
+    if (!confirm(`Restore from "${filename}"? This will replace ALL existing data.`)) return;
+
+    setRestoringFile(filename);
+    try {
+      const response = await fetch(`/api/backup/auto-backups/${encodeURIComponent(filename)}`);
+      if (!response.ok) throw new Error("Failed to fetch backup");
+      const data = await response.json();
+      await importMutation.mutateAsync({ data });
+      queryClient.invalidateQueries();
+      toast({ title: "Restore successful", description: `Data restored from ${filename}` });
+    } catch {
+      toast({ title: "Restore failed", description: "Could not restore from backup.", variant: "destructive" });
+    } finally {
+      setRestoringFile(null);
+    }
+  }
+
+  async function handleDeleteAutoBackup(filename: string) {
+    if (!confirm(`Delete backup "${filename}"? This cannot be undone.`)) return;
+    try {
+      await deleteBackup.mutateAsync(filename);
+      toast({ title: "Backup deleted", description: filename });
+    } catch {
+      toast({ title: "Delete failed", variant: "destructive" });
+    }
+  }
+
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
@@ -70,8 +204,13 @@ export function Settings() {
       <div className="grid md:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><Download className="w-5 h-5" />Export Database</CardTitle>
-            <CardDescription>Download a complete backup of all your data as a JSON file. Use this to keep a copy of your products, customers, and invoices.</CardDescription>
+            <CardTitle className="flex items-center gap-2">
+              <Download className="w-5 h-5" />
+              Export Database
+            </CardTitle>
+            <CardDescription>
+              Download a complete backup of all your data as a JSON file.
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <Button onClick={handleExport} disabled={isExporting} className="w-full">
@@ -82,8 +221,13 @@ export function Settings() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><Upload className="w-5 h-5" />Import Database</CardTitle>
-            <CardDescription>Restore your data from a previously exported JSON backup file. Warning: This will replace all existing data.</CardDescription>
+            <CardTitle className="flex items-center gap-2">
+              <Upload className="w-5 h-5" />
+              Import Database
+            </CardTitle>
+            <CardDescription>
+              Restore your data from a previously exported JSON backup file. Warning: This will replace all existing data.
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <Button onClick={handleImport} disabled={importing} variant="outline" className="w-full">
@@ -94,8 +238,125 @@ export function Settings() {
       </div>
 
       <Card>
+        <CardHeader className="flex flex-row items-start justify-between gap-4">
+          <div className="space-y-1">
+            <CardTitle className="flex items-center gap-2">
+              <Clock className="w-5 h-5" />
+              Auto Backups
+            </CardTitle>
+            <CardDescription>
+              The server automatically saves a backup every 24 hours. Up to 10 backups are kept. You can also trigger a backup manually at any time.
+            </CardDescription>
+          </div>
+          <div className="flex gap-2 shrink-0">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => refetchBackups()}
+              disabled={isRefetchingBackups}
+            >
+              <RefreshCw className={`w-4 h-4 mr-1 ${isRefetchingBackups ? "animate-spin" : ""}`} />
+              Refresh
+            </Button>
+            <Button
+              size="sm"
+              onClick={handleTriggerBackup}
+              disabled={triggerBackup.isPending}
+            >
+              <Zap className="w-4 h-4 mr-1" />
+              {triggerBackup.isPending ? "Saving..." : "Backup Now"}
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {autoBackupsData?.backupDir && (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 rounded-md px-3 py-2">
+              <FolderOpen className="w-3.5 h-3.5 shrink-0" />
+              <span className="font-mono break-all">{autoBackupsData.backupDir}</span>
+            </div>
+          )}
+
+          {isLoadingBackups ? (
+            <div className="space-y-2">
+              {[1, 2, 3].map(i => (
+                <div key={i} className="h-14 bg-muted animate-pulse rounded-md" />
+              ))}
+            </div>
+          ) : !autoBackupsData?.backups?.length ? (
+            <div className="flex flex-col items-center justify-center py-10 text-muted-foreground gap-2">
+              <HardDrive className="w-8 h-8 opacity-40" />
+              <p className="text-sm">No auto-backups yet.</p>
+              <Button variant="outline" size="sm" onClick={handleTriggerBackup} disabled={triggerBackup.isPending}>
+                <Zap className="w-4 h-4 mr-1" />
+                Create First Backup
+              </Button>
+            </div>
+          ) : (
+            <div className="divide-y rounded-md border overflow-hidden">
+              {autoBackupsData.backups.map((backup, index) => (
+                <div
+                  key={backup.filename}
+                  className="flex flex-col sm:flex-row sm:items-center gap-3 px-4 py-3 bg-background hover:bg-muted/30 transition-colors"
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm font-medium font-mono truncate">{backup.filename}</span>
+                      {index === 0 && (
+                        <Badge variant="secondary" className="text-xs shrink-0">Latest</Badge>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <Clock className="w-3 h-3" />
+                        {formatDate(backup.createdAt)}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <HardDrive className="w-3 h-3" />
+                        {formatBytes(backup.sizeBytes)}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDownloadAutoBackup(backup.filename)}
+                    >
+                      <Download className="w-3.5 h-3.5 mr-1" />
+                      Download
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleRestoreAutoBackup(backup.filename)}
+                      disabled={restoringFile === backup.filename}
+                    >
+                      <RotateCcw className="w-3.5 h-3.5 mr-1" />
+                      {restoringFile === backup.filename ? "Restoring..." : "Restore"}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                      onClick={() => handleDeleteAutoBackup(backup.filename)}
+                      disabled={deleteBackup.isPending}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2"><Database className="w-5 h-5" />About BillingPro</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <Database className="w-5 h-5" />
+            About BillingPro
+          </CardTitle>
         </CardHeader>
         <CardContent className="text-sm text-muted-foreground space-y-2">
           <p>BillingPro is an offline billing application designed for small businesses and shops.</p>
