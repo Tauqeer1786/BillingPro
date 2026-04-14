@@ -3,20 +3,32 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Billing application API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: products
+    description: Product management
+  - name: customers
+    description: Customer/Party management
+  - name: invoices
+    description: Invoice/Billing operations
+  - name: dashboard
+    description: Dashboard summaries
+  - name: reports
+    description: Analytics and reports
+  - name: backup
+    description: Database backup and restore
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +36,620 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  # ── Products ──
+  /products:
+    get:
+      operationId: listProducts
+      tags: [products]
+      summary: List all products
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        "200":
+          description: Products list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductListResponse"
+    post:
+      operationId: createProduct
+      tags: [products]
+      summary: Create a product
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateProductBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+
+  /products/{id}:
+    get:
+      operationId: getProduct
+      tags: [products]
+      summary: Get a product
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Product details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+    put:
+      operationId: updateProduct
+      tags: [products]
+      summary: Update a product
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProductBody"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+    delete:
+      operationId: deleteProduct
+      tags: [products]
+      summary: Delete a product
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeleteResponse"
+
+  # ── Customers ──
+  /customers:
+    get:
+      operationId: listCustomers
+      tags: [customers]
+      summary: List all customers
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        "200":
+          description: Customers list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomerListResponse"
+    post:
+      operationId: createCustomer
+      tags: [customers]
+      summary: Create a customer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCustomerBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Customer"
+
+  /customers/{id}:
+    get:
+      operationId: getCustomer
+      tags: [customers]
+      summary: Get a customer
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Customer details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomerDetail"
+    put:
+      operationId: updateCustomer
+      tags: [customers]
+      summary: Update a customer
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCustomerBody"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Customer"
+    delete:
+      operationId: deleteCustomer
+      tags: [customers]
+      summary: Delete a customer
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeleteResponse"
+
+  /customers/{id}/purchases:
+    get:
+      operationId: getCustomerPurchases
+      tags: [customers]
+      summary: Get purchase history for a customer
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Purchase history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/InvoiceSummary"
+
+  # ── Invoices ──
+  /invoices:
+    get:
+      operationId: listInvoices
+      tags: [invoices]
+      summary: List all invoices
+      parameters:
+        - name: customerId
+          in: query
+          schema:
+            type: integer
+        - name: startDate
+          in: query
+          schema:
+            type: string
+        - name: endDate
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        "200":
+          description: Invoices list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InvoiceListResponse"
+    post:
+      operationId: createInvoice
+      tags: [invoices]
+      summary: Create an invoice
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateInvoiceBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Invoice"
+
+  /invoices/{id}:
+    get:
+      operationId: getInvoice
+      tags: [invoices]
+      summary: Get invoice details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Invoice details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Invoice"
+    delete:
+      operationId: deleteInvoice
+      tags: [invoices]
+      summary: Delete an invoice
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeleteResponse"
+
+  # ── Dashboard ──
+  /dashboard/summary:
+    get:
+      operationId: getDashboardSummary
+      tags: [dashboard]
+      summary: Get dashboard summary with totals
+      parameters:
+        - name: financialYear
+          in: query
+          schema:
+            type: string
+            description: "Financial year e.g. 2025-2026"
+      responses:
+        "200":
+          description: Dashboard summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+
+  /dashboard/recent-transactions:
+    get:
+      operationId: getRecentTransactions
+      tags: [dashboard]
+      summary: Get recent transactions
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        "200":
+          description: Recent transactions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/InvoiceSummary"
+
+  /dashboard/top-products:
+    get:
+      operationId: getTopProducts
+      tags: [dashboard]
+      summary: Get top selling products
+      parameters:
+        - name: financialYear
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 5
+      responses:
+        "200":
+          description: Top products
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TopProduct"
+
+  /dashboard/top-customers:
+    get:
+      operationId: getTopCustomers
+      tags: [dashboard]
+      summary: Get top customers by revenue
+      parameters:
+        - name: financialYear
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 5
+      responses:
+        "200":
+          description: Top customers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TopCustomer"
+
+  /dashboard/monthly-sales:
+    get:
+      operationId: getMonthlySales
+      tags: [dashboard]
+      summary: Get monthly sales breakdown
+      parameters:
+        - name: financialYear
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Monthly sales data
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MonthlySales"
+
+  # ── Reports ──
+  /reports/sales:
+    get:
+      operationId: getSalesReport
+      tags: [reports]
+      summary: Get sales report for period
+      parameters:
+        - name: startDate
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: endDate
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: groupBy
+          in: query
+          schema:
+            type: string
+            enum: [daily, monthly, yearly]
+            default: monthly
+      responses:
+        "200":
+          description: Sales report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SalesReport"
+
+  /reports/gst:
+    get:
+      operationId: getGstReport
+      tags: [reports]
+      summary: Get GST report for financial year
+      parameters:
+        - name: financialYear
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: GST report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GstReport"
+
+  /reports/profit:
+    get:
+      operationId: getProfitReport
+      tags: [reports]
+      summary: Get profit report
+      parameters:
+        - name: startDate
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: endDate
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: groupBy
+          in: query
+          schema:
+            type: string
+            enum: [daily, monthly, yearly]
+            default: monthly
+      responses:
+        "200":
+          description: Profit report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProfitReport"
+
+  /reports/product-wise:
+    get:
+      operationId: getProductWiseReport
+      tags: [reports]
+      summary: Product-wise sales report
+      parameters:
+        - name: startDate
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: endDate
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Product-wise report
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ProductWiseReport"
+
+  /reports/customer-wise:
+    get:
+      operationId: getCustomerWiseReport
+      tags: [reports]
+      summary: Customer-wise sales report
+      parameters:
+        - name: startDate
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: endDate
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Customer-wise report
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CustomerWiseReport"
+
+  # ── Backup ──
+  /backup/export:
+    get:
+      operationId: exportDatabase
+      tags: [backup]
+      summary: Export database as JSON
+      responses:
+        "200":
+          description: Database export
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DatabaseExport"
+
+  /backup/import:
+    post:
+      operationId: importDatabase
+      tags: [backup]
+      summary: Import database from JSON
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DatabaseExport"
+      responses:
+        "200":
+          description: Import result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImportResult"
+
+  # ── Financial Years ──
+  /financial-years:
+    get:
+      operationId: listFinancialYears
+      tags: [reports]
+      summary: List available financial years
+      responses:
+        "200":
+          description: Financial years
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FinancialYear"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +660,563 @@ components:
       required:
         - status
 
+    Product:
+      type: object
+      required: [id, name, costPrice, marginPercent, sellingPrice, gstPercent, stock, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        costPrice:
+          type: number
+        marginPercent:
+          type: number
+        sellingPrice:
+          type: number
+        gstPercent:
+          type: number
+        stock:
+          type: integer
+        hsn:
+          type: string
+        unit:
+          type: string
+        createdAt:
+          type: string
+
+    CreateProductBody:
+      type: object
+      required: [name, costPrice, marginPercent, gstPercent, stock]
+      properties:
+        name:
+          type: string
+        costPrice:
+          type: number
+        marginPercent:
+          type: number
+        gstPercent:
+          type: number
+        stock:
+          type: integer
+        hsn:
+          type: string
+        unit:
+          type: string
+          default: "pcs"
+
+    UpdateProductBody:
+      type: object
+      properties:
+        name:
+          type: string
+        costPrice:
+          type: number
+        marginPercent:
+          type: number
+        gstPercent:
+          type: number
+        stock:
+          type: integer
+        hsn:
+          type: string
+        unit:
+          type: string
+
+    ProductListResponse:
+      type: object
+      required: [products, total, page, limit]
+      properties:
+        products:
+          type: array
+          items:
+            $ref: "#/components/schemas/Product"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+
+    Customer:
+      type: object
+      required: [id, name, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        address:
+          type: string
+        gstin:
+          type: string
+        totalPurchases:
+          type: number
+        createdAt:
+          type: string
+
+    CustomerDetail:
+      type: object
+      required: [id, name, createdAt, invoices]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        address:
+          type: string
+        gstin:
+          type: string
+        totalPurchases:
+          type: number
+        createdAt:
+          type: string
+        invoices:
+          type: array
+          items:
+            $ref: "#/components/schemas/InvoiceSummary"
+
+    CreateCustomerBody:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        address:
+          type: string
+        gstin:
+          type: string
+
+    UpdateCustomerBody:
+      type: object
+      properties:
+        name:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        address:
+          type: string
+        gstin:
+          type: string
+
+    CustomerListResponse:
+      type: object
+      required: [customers, total, page, limit]
+      properties:
+        customers:
+          type: array
+          items:
+            $ref: "#/components/schemas/Customer"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+
+    InvoiceItem:
+      type: object
+      required: [productId, productName, quantity, unitPrice, gstPercent, gstAmount, totalAmount]
+      properties:
+        id:
+          type: integer
+        productId:
+          type: integer
+        productName:
+          type: string
+        quantity:
+          type: integer
+        unitPrice:
+          type: number
+        costPrice:
+          type: number
+        gstPercent:
+          type: number
+        gstAmount:
+          type: number
+        discountPercent:
+          type: number
+        discountAmount:
+          type: number
+        totalAmount:
+          type: number
+        profit:
+          type: number
+
+    CreateInvoiceItem:
+      type: object
+      required: [productId, quantity, unitPrice]
+      properties:
+        productId:
+          type: integer
+        quantity:
+          type: integer
+        unitPrice:
+          type: number
+        discountPercent:
+          type: number
+          default: 0
+
+    Invoice:
+      type: object
+      required: [id, invoiceNumber, date, items, subtotal, totalGst, totalDiscount, grandTotal, createdAt]
+      properties:
+        id:
+          type: integer
+        invoiceNumber:
+          type: string
+        customerId:
+          type: integer
+        customerName:
+          type: string
+        date:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/InvoiceItem"
+        subtotal:
+          type: number
+        totalGst:
+          type: number
+        totalDiscount:
+          type: number
+        grandTotal:
+          type: number
+        totalProfit:
+          type: number
+        notes:
+          type: string
+        createdAt:
+          type: string
+
+    CreateInvoiceBody:
+      type: object
+      required: [items, date]
+      properties:
+        customerId:
+          type: integer
+        date:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/CreateInvoiceItem"
+        notes:
+          type: string
+        overallDiscountPercent:
+          type: number
+          default: 0
+
+    InvoiceSummary:
+      type: object
+      required: [id, invoiceNumber, date, grandTotal, createdAt]
+      properties:
+        id:
+          type: integer
+        invoiceNumber:
+          type: string
+        customerName:
+          type: string
+        date:
+          type: string
+        grandTotal:
+          type: number
+        totalProfit:
+          type: number
+        itemCount:
+          type: integer
+        createdAt:
+          type: string
+
+    InvoiceListResponse:
+      type: object
+      required: [invoices, total, page, limit]
+      properties:
+        invoices:
+          type: array
+          items:
+            $ref: "#/components/schemas/InvoiceSummary"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+
+    DashboardSummary:
+      type: object
+      required: [totalSales, totalProfit, totalInvoices, totalCustomers, totalProducts]
+      properties:
+        totalSales:
+          type: number
+        totalProfit:
+          type: number
+        totalGst:
+          type: number
+        totalInvoices:
+          type: integer
+        totalCustomers:
+          type: integer
+        totalProducts:
+          type: integer
+        financialYear:
+          type: string
+
+    TopProduct:
+      type: object
+      required: [productId, productName, totalQuantity, totalRevenue]
+      properties:
+        productId:
+          type: integer
+        productName:
+          type: string
+        totalQuantity:
+          type: integer
+        totalRevenue:
+          type: number
+        totalProfit:
+          type: number
+
+    TopCustomer:
+      type: object
+      required: [customerId, customerName, totalPurchases, invoiceCount]
+      properties:
+        customerId:
+          type: integer
+        customerName:
+          type: string
+        totalPurchases:
+          type: number
+        invoiceCount:
+          type: integer
+
+    MonthlySales:
+      type: object
+      required: [month, year, totalSales, totalProfit, invoiceCount]
+      properties:
+        month:
+          type: integer
+        year:
+          type: integer
+        monthName:
+          type: string
+        totalSales:
+          type: number
+        totalProfit:
+          type: number
+        totalGst:
+          type: number
+        invoiceCount:
+          type: integer
+
+    SalesReport:
+      type: object
+      required: [entries, totalSales, totalGst]
+      properties:
+        entries:
+          type: array
+          items:
+            $ref: "#/components/schemas/SalesReportEntry"
+        totalSales:
+          type: number
+        totalGst:
+          type: number
+        totalProfit:
+          type: number
+
+    SalesReportEntry:
+      type: object
+      required: [period, sales, gst, invoiceCount]
+      properties:
+        period:
+          type: string
+        sales:
+          type: number
+        gst:
+          type: number
+        profit:
+          type: number
+        invoiceCount:
+          type: integer
+
+    GstReport:
+      type: object
+      required: [entries, totalCgst, totalSgst, totalIgst, totalGst]
+      properties:
+        entries:
+          type: array
+          items:
+            $ref: "#/components/schemas/GstReportEntry"
+        totalCgst:
+          type: number
+        totalSgst:
+          type: number
+        totalIgst:
+          type: number
+        totalGst:
+          type: number
+        financialYear:
+          type: string
+
+    GstReportEntry:
+      type: object
+      required: [month, monthName, cgst, sgst, igst, totalGst]
+      properties:
+        month:
+          type: integer
+        monthName:
+          type: string
+        cgst:
+          type: number
+        sgst:
+          type: number
+        igst:
+          type: number
+        totalGst:
+          type: number
+        taxableAmount:
+          type: number
+
+    ProfitReport:
+      type: object
+      required: [entries, totalRevenue, totalCost, totalProfit]
+      properties:
+        entries:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProfitReportEntry"
+        totalRevenue:
+          type: number
+        totalCost:
+          type: number
+        totalProfit:
+          type: number
+        profitMargin:
+          type: number
+
+    ProfitReportEntry:
+      type: object
+      required: [period, revenue, cost, profit]
+      properties:
+        period:
+          type: string
+        revenue:
+          type: number
+        cost:
+          type: number
+        profit:
+          type: number
+        margin:
+          type: number
+
+    ProductWiseReport:
+      type: object
+      required: [productId, productName, totalQuantity, totalRevenue, totalProfit]
+      properties:
+        productId:
+          type: integer
+        productName:
+          type: string
+        totalQuantity:
+          type: integer
+        totalRevenue:
+          type: number
+        totalCost:
+          type: number
+        totalProfit:
+          type: number
+        totalGst:
+          type: number
+
+    CustomerWiseReport:
+      type: object
+      required: [customerId, customerName, totalPurchases, invoiceCount]
+      properties:
+        customerId:
+          type: integer
+        customerName:
+          type: string
+        totalPurchases:
+          type: number
+        invoiceCount:
+          type: integer
+        lastPurchaseDate:
+          type: string
+
+    FinancialYear:
+      type: object
+      required: [label, startDate, endDate]
+      properties:
+        label:
+          type: string
+        startDate:
+          type: string
+        endDate:
+          type: string
+
+    DatabaseExport:
+      type: object
+      required: [version, exportedAt, products, customers, invoices, invoiceItems]
+      properties:
+        version:
+          type: string
+        exportedAt:
+          type: string
+        products:
+          type: array
+          items:
+            $ref: "#/components/schemas/Product"
+        customers:
+          type: array
+          items:
+            $ref: "#/components/schemas/Customer"
+        invoices:
+          type: array
+          items:
+            $ref: "#/components/schemas/Invoice"
+        invoiceItems:
+          type: array
+          items:
+            $ref: "#/components/schemas/InvoiceItem"
+
+    ImportResult:
+      type: object
+      required: [success, message]
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        imported:
+          type: object
+          properties:
+            products:
+              type: integer
+            customers:
+              type: integer
+            invoices:
+              type: integer
+
+    DeleteResponse:
+      type: object
+      required: [success]
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string

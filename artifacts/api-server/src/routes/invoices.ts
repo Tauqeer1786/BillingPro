@@ -1,0 +1,307 @@
+import { Router, type IRouter } from "express";
+import { eq, desc, sql, and, gte, lte } from "drizzle-orm";
+import { db, invoicesTable, invoiceItemsTable, productsTable, customersTable } from "@workspace/db";
+import {
+  ListInvoicesQueryParams,
+  CreateInvoiceBody,
+  GetInvoiceParams,
+  DeleteInvoiceParams,
+} from "@workspace/api-zod";
+
+const router: IRouter = Router();
+
+async function generateInvoiceNumber(): Promise<string> {
+  const now = new Date();
+  const fy = now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1;
+  const prefix = `INV-${fy}-${fy + 1}-`;
+
+  const [result] = await db.select({
+    count: sql<number>`count(*)`,
+  }).from(invoicesTable)
+    .where(sql`${invoicesTable.invoiceNumber} like ${prefix + '%'}`);
+
+  const num = Number(result.count) + 1;
+  return `${prefix}${String(num).padStart(4, '0')}`;
+}
+
+router.get("/invoices", async (req, res): Promise<void> => {
+  const params = ListInvoicesQueryParams.safeParse(req.query);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+
+  const { customerId, startDate, endDate, page = 1, limit = 50 } = params.data;
+  const offset = (page - 1) * limit;
+
+  const conditions = [];
+  if (customerId) conditions.push(eq(invoicesTable.customerId, customerId));
+  if (startDate) conditions.push(gte(invoicesTable.date, startDate));
+  if (endDate) conditions.push(lte(invoicesTable.date, endDate));
+
+  const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+  const [invoices, [{ count: total }]] = await Promise.all([
+    db.select({
+      id: invoicesTable.id,
+      invoiceNumber: invoicesTable.invoiceNumber,
+      customerId: invoicesTable.customerId,
+      date: invoicesTable.date,
+      grandTotal: invoicesTable.grandTotal,
+      totalProfit: invoicesTable.totalProfit,
+      createdAt: invoicesTable.createdAt,
+    }).from(invoicesTable)
+      .where(whereClause)
+      .orderBy(desc(invoicesTable.createdAt))
+      .limit(limit)
+      .offset(offset),
+    db.select({ count: sql<number>`count(*)` }).from(invoicesTable).where(whereClause),
+  ]);
+
+  const invoiceIds = invoices.map(i => i.id);
+  let itemCounts: Record<number, number> = {};
+  if (invoiceIds.length > 0) {
+    const counts = await db.select({
+      invoiceId: invoiceItemsTable.invoiceId,
+      count: sql<number>`count(*)`,
+    }).from(invoiceItemsTable)
+      .where(sql`${invoiceItemsTable.invoiceId} in ${invoiceIds}`)
+      .groupBy(invoiceItemsTable.invoiceId);
+    for (const c of counts) {
+      itemCounts[c.invoiceId] = Number(c.count);
+    }
+  }
+
+  const customerIds = [...new Set(invoices.filter(i => i.customerId).map(i => i.customerId!))];
+  let customerNames: Record<number, string> = {};
+  if (customerIds.length > 0) {
+    const customers = await db.select({ id: customersTable.id, name: customersTable.name })
+      .from(customersTable)
+      .where(sql`${customersTable.id} in ${customerIds}`);
+    for (const c of customers) {
+      customerNames[c.id] = c.name;
+    }
+  }
+
+  res.json({
+    invoices: invoices.map(i => ({
+      id: i.id,
+      invoiceNumber: i.invoiceNumber,
+      customerName: i.customerId ? customerNames[i.customerId] || "" : "",
+      date: i.date,
+      grandTotal: i.grandTotal,
+      totalProfit: i.totalProfit,
+      itemCount: itemCounts[i.id] || 0,
+      createdAt: i.createdAt.toISOString(),
+    })),
+    total: Number(total),
+    page,
+    limit,
+  });
+});
+
+router.post("/invoices", async (req, res): Promise<void> => {
+  const parsed = CreateInvoiceBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+
+  const { customerId, date, items, notes, overallDiscountPercent = 0 } = parsed.data;
+
+  const productIds = items.map(i => i.productId);
+  const products = await db.select().from(productsTable)
+    .where(sql`${productsTable.id} in ${productIds}`);
+
+  const productMap: Record<number, typeof products[0]> = {};
+  for (const p of products) {
+    productMap[p.id] = p;
+  }
+
+  const invoiceNumber = await generateInvoiceNumber();
+
+  let subtotal = 0;
+  let totalGst = 0;
+  let totalDiscount = 0;
+  let totalProfit = 0;
+
+  const processedItems = items.map(item => {
+    const product = productMap[item.productId];
+    if (!product) throw new Error(`Product ${item.productId} not found`);
+
+    const itemDiscountPercent = item.discountPercent || 0;
+    const baseAmount = item.unitPrice * item.quantity;
+    const discountAmount = baseAmount * (itemDiscountPercent / 100);
+    const afterDiscount = baseAmount - discountAmount;
+    const gstAmount = afterDiscount * (product.gstPercent / 100);
+    const totalAmount = afterDiscount + gstAmount;
+    const profit = (item.unitPrice - product.costPrice) * item.quantity - discountAmount;
+
+    subtotal += afterDiscount;
+    totalGst += gstAmount;
+    totalDiscount += discountAmount;
+    totalProfit += profit;
+
+    return {
+      productId: item.productId,
+      productName: product.name,
+      quantity: item.quantity,
+      unitPrice: Math.round(item.unitPrice * 100) / 100,
+      costPrice: product.costPrice,
+      gstPercent: product.gstPercent,
+      gstAmount: Math.round(gstAmount * 100) / 100,
+      discountPercent: itemDiscountPercent,
+      discountAmount: Math.round(discountAmount * 100) / 100,
+      totalAmount: Math.round(totalAmount * 100) / 100,
+      profit: Math.round(profit * 100) / 100,
+    };
+  });
+
+  if (overallDiscountPercent > 0) {
+    const overallDiscount = subtotal * (overallDiscountPercent / 100);
+    totalDiscount += overallDiscount;
+    subtotal -= overallDiscount;
+    totalGst = subtotal * (processedItems.reduce((sum, i) => sum + i.gstPercent * i.quantity, 0) / processedItems.reduce((sum, i) => sum + i.quantity, 0)) / 100;
+  }
+
+  const grandTotal = subtotal + totalGst;
+
+  const [invoice] = await db.insert(invoicesTable).values({
+    invoiceNumber,
+    customerId: customerId || null,
+    date,
+    subtotal: Math.round(subtotal * 100) / 100,
+    totalGst: Math.round(totalGst * 100) / 100,
+    totalDiscount: Math.round(totalDiscount * 100) / 100,
+    grandTotal: Math.round(grandTotal * 100) / 100,
+    totalProfit: Math.round(totalProfit * 100) / 100,
+    notes: notes || null,
+  }).returning();
+
+  const insertedItems = await db.insert(invoiceItemsTable).values(
+    processedItems.map(item => ({
+      ...item,
+      invoiceId: invoice.id,
+    }))
+  ).returning();
+
+  for (const item of processedItems) {
+    await db.update(productsTable)
+      .set({ stock: sql`${productsTable.stock} - ${item.quantity}` })
+      .where(eq(productsTable.id, item.productId));
+  }
+
+  let customerName = "";
+  if (customerId) {
+    const [customer] = await db.select().from(customersTable).where(eq(customersTable.id, customerId));
+    if (customer) customerName = customer.name;
+  }
+
+  res.status(201).json({
+    id: invoice.id,
+    invoiceNumber: invoice.invoiceNumber,
+    customerId: invoice.customerId,
+    customerName,
+    date: invoice.date,
+    items: insertedItems.map(i => ({
+      id: i.id,
+      productId: i.productId,
+      productName: i.productName,
+      quantity: i.quantity,
+      unitPrice: i.unitPrice,
+      costPrice: i.costPrice,
+      gstPercent: i.gstPercent,
+      gstAmount: i.gstAmount,
+      discountPercent: i.discountPercent,
+      discountAmount: i.discountAmount,
+      totalAmount: i.totalAmount,
+      profit: i.profit,
+    })),
+    subtotal: invoice.subtotal,
+    totalGst: invoice.totalGst,
+    totalDiscount: invoice.totalDiscount,
+    grandTotal: invoice.grandTotal,
+    totalProfit: invoice.totalProfit,
+    notes: invoice.notes,
+    createdAt: invoice.createdAt.toISOString(),
+  });
+});
+
+router.get("/invoices/:id", async (req, res): Promise<void> => {
+  const params = GetInvoiceParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+
+  const [invoice] = await db.select().from(invoicesTable).where(eq(invoicesTable.id, params.data.id));
+  if (!invoice) {
+    res.status(404).json({ error: "Invoice not found" });
+    return;
+  }
+
+  const items = await db.select().from(invoiceItemsTable).where(eq(invoiceItemsTable.invoiceId, invoice.id));
+
+  let customerName = "";
+  if (invoice.customerId) {
+    const [customer] = await db.select().from(customersTable).where(eq(customersTable.id, invoice.customerId));
+    if (customer) customerName = customer.name;
+  }
+
+  res.json({
+    id: invoice.id,
+    invoiceNumber: invoice.invoiceNumber,
+    customerId: invoice.customerId,
+    customerName,
+    date: invoice.date,
+    items: items.map(i => ({
+      id: i.id,
+      productId: i.productId,
+      productName: i.productName,
+      quantity: i.quantity,
+      unitPrice: i.unitPrice,
+      costPrice: i.costPrice,
+      gstPercent: i.gstPercent,
+      gstAmount: i.gstAmount,
+      discountPercent: i.discountPercent,
+      discountAmount: i.discountAmount,
+      totalAmount: i.totalAmount,
+      profit: i.profit,
+    })),
+    subtotal: invoice.subtotal,
+    totalGst: invoice.totalGst,
+    totalDiscount: invoice.totalDiscount,
+    grandTotal: invoice.grandTotal,
+    totalProfit: invoice.totalProfit,
+    notes: invoice.notes,
+    createdAt: invoice.createdAt.toISOString(),
+  });
+});
+
+router.delete("/invoices/:id", async (req, res): Promise<void> => {
+  const params = DeleteInvoiceParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+
+  const items = await db.select().from(invoiceItemsTable).where(eq(invoiceItemsTable.invoiceId, params.data.id));
+  for (const item of items) {
+    await db.update(productsTable)
+      .set({ stock: sql`${productsTable.stock} + ${item.quantity}` })
+      .where(eq(productsTable.id, item.productId));
+  }
+
+  const [invoice] = await db.delete(invoicesTable)
+    .where(eq(invoicesTable.id, params.data.id))
+    .returning();
+
+  if (!invoice) {
+    res.status(404).json({ error: "Invoice not found" });
+    return;
+  }
+
+  res.json({ success: true, message: "Invoice deleted" });
+});
+
+export default router;
