@@ -12,7 +12,7 @@ A professional billing web application for small businesses and shops in India. 
 - **TypeScript version**: 5.9
 - **Frontend**: React + Vite + Tailwind CSS + shadcn/ui + Recharts
 - **API framework**: Express 5
-- **Database**: PostgreSQL + Drizzle ORM
+- **Database**: SQLite (`better-sqlite3`) + Drizzle ORM — stored locally at `billing.db` in the workspace root
 - **Validation**: Zod (`zod/v4`), `drizzle-zod`
 - **API codegen**: Orval (from OpenAPI spec)
 - **Build**: esbuild (CJS bundle)

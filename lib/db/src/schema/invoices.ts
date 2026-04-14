@@ -1,37 +1,37 @@
-import { pgTable, serial, text, integer, doublePrecision, timestamp } from "drizzle-orm/pg-core";
+import { sqliteTable, integer, text, real } from "drizzle-orm/sqlite-core";
 import { customersTable } from "./customers";
 import { productsTable } from "./products";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
-export const invoicesTable = pgTable("invoices", {
-  id: serial("id").primaryKey(),
+export const invoicesTable = sqliteTable("invoices", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
   invoiceNumber: text("invoice_number").notNull().unique(),
   customerId: integer("customer_id").references(() => customersTable.id, { onDelete: "set null" }),
   date: text("date").notNull(),
-  subtotal: doublePrecision("subtotal").notNull().default(0),
-  totalGst: doublePrecision("total_gst").notNull().default(0),
-  totalDiscount: doublePrecision("total_discount").notNull().default(0),
-  grandTotal: doublePrecision("grand_total").notNull().default(0),
-  totalProfit: doublePrecision("total_profit").notNull().default(0),
+  subtotal: real("subtotal").notNull().default(0),
+  totalGst: real("total_gst").notNull().default(0),
+  totalDiscount: real("total_discount").notNull().default(0),
+  grandTotal: real("grand_total").notNull().default(0),
+  totalProfit: real("total_profit").notNull().default(0),
   notes: text("notes"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
 });
 
-export const invoiceItemsTable = pgTable("invoice_items", {
-  id: serial("id").primaryKey(),
+export const invoiceItemsTable = sqliteTable("invoice_items", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
   invoiceId: integer("invoice_id").notNull().references(() => invoicesTable.id, { onDelete: "cascade" }),
   productId: integer("product_id").notNull().references(() => productsTable.id),
   productName: text("product_name").notNull(),
   quantity: integer("quantity").notNull(),
-  unitPrice: doublePrecision("unit_price").notNull(),
-  costPrice: doublePrecision("cost_price").notNull().default(0),
-  gstPercent: doublePrecision("gst_percent").notNull(),
-  gstAmount: doublePrecision("gst_amount").notNull(),
-  discountPercent: doublePrecision("discount_percent").default(0),
-  discountAmount: doublePrecision("discount_amount").default(0),
-  totalAmount: doublePrecision("total_amount").notNull(),
-  profit: doublePrecision("profit").default(0),
+  unitPrice: real("unit_price").notNull(),
+  costPrice: real("cost_price").notNull().default(0),
+  gstPercent: real("gst_percent").notNull(),
+  gstAmount: real("gst_amount").notNull(),
+  discountPercent: real("discount_percent").default(0),
+  discountAmount: real("discount_amount").default(0),
+  totalAmount: real("total_amount").notNull(),
+  profit: real("profit").default(0),
 });
 
 export const insertInvoiceSchema = createInsertSchema(invoicesTable).omit({ id: true, createdAt: true });

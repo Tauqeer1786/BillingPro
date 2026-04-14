@@ -95,7 +95,7 @@ router.get("/dashboard/recent-transactions", async (req, res): Promise<void> => 
     grandTotal: i.grandTotal,
     totalProfit: i.totalProfit,
     itemCount: 0,
-    createdAt: i.createdAt.toISOString(),
+    createdAt: i.createdAt instanceof Date ? i.createdAt.toISOString() : String(i.createdAt),
   })));
 });
 
@@ -178,8 +178,8 @@ router.get("/dashboard/monthly-sales", async (req, res): Promise<void> => {
     "July", "August", "September", "October", "November", "December"];
 
   const results = await db.select({
-    month: sql<number>`extract(month from ${invoicesTable.date}::date)`,
-    year: sql<number>`extract(year from ${invoicesTable.date}::date)`,
+    month: sql<number>`CAST(strftime('%m', ${invoicesTable.date}) AS INTEGER)`,
+    year: sql<number>`CAST(strftime('%Y', ${invoicesTable.date}) AS INTEGER)`,
     totalSales: sql<number>`sum(${invoicesTable.grandTotal})`,
     totalProfit: sql<number>`sum(${invoicesTable.totalProfit})`,
     totalGst: sql<number>`sum(${invoicesTable.totalGst})`,
@@ -189,8 +189,14 @@ router.get("/dashboard/monthly-sales", async (req, res): Promise<void> => {
       gte(invoicesTable.date, startDate),
       lte(invoicesTable.date, endDate)
     ))
-    .groupBy(sql`extract(year from ${invoicesTable.date}::date)`, sql`extract(month from ${invoicesTable.date}::date)`)
-    .orderBy(sql`extract(year from ${invoicesTable.date}::date)`, sql`extract(month from ${invoicesTable.date}::date)`);
+    .groupBy(
+      sql`strftime('%Y', ${invoicesTable.date})`,
+      sql`strftime('%m', ${invoicesTable.date})`
+    )
+    .orderBy(
+      sql`strftime('%Y', ${invoicesTable.date})`,
+      sql`strftime('%m', ${invoicesTable.date})`
+    );
 
   res.json(results.map(r => ({
     month: Number(r.month),

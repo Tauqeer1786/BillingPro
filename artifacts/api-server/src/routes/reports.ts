@@ -38,11 +38,11 @@ router.get("/reports/sales", async (req, res): Promise<void> => {
     periodExpr = sql`${invoicesTable.date}`;
     orderExpr = sql`${invoicesTable.date}`;
   } else if (groupBy === "yearly") {
-    periodExpr = sql`extract(year from ${invoicesTable.date}::date)::text`;
-    orderExpr = sql`extract(year from ${invoicesTable.date}::date)`;
+    periodExpr = sql`strftime('%Y', ${invoicesTable.date})`;
+    orderExpr = sql`strftime('%Y', ${invoicesTable.date})`;
   } else {
-    periodExpr = sql`to_char(${invoicesTable.date}::date, 'YYYY-MM')`;
-    orderExpr = sql`to_char(${invoicesTable.date}::date, 'YYYY-MM')`;
+    periodExpr = sql`strftime('%Y-%m', ${invoicesTable.date})`;
+    orderExpr = sql`strftime('%Y-%m', ${invoicesTable.date})`;
   }
 
   const results = await db.select({
@@ -87,13 +87,13 @@ router.get("/reports/gst", async (req, res): Promise<void> => {
   const condition = and(gte(invoicesTable.date, startDate), lte(invoicesTable.date, endDate));
 
   const results = await db.select({
-    month: sql<number>`extract(month from ${invoicesTable.date}::date)`,
+    month: sql<number>`CAST(strftime('%m', ${invoicesTable.date}) AS INTEGER)`,
     totalGst: sql<number>`sum(${invoicesTable.totalGst})`,
     taxableAmount: sql<number>`sum(${invoicesTable.subtotal})`,
   }).from(invoicesTable)
     .where(condition)
-    .groupBy(sql`extract(month from ${invoicesTable.date}::date)`)
-    .orderBy(sql`extract(month from ${invoicesTable.date}::date)`);
+    .groupBy(sql`strftime('%m', ${invoicesTable.date})`)
+    .orderBy(sql`strftime('%m', ${invoicesTable.date})`);
 
   const [totals] = await db.select({
     totalGst: sql<number>`coalesce(sum(${invoicesTable.totalGst}), 0)`,
@@ -138,9 +138,9 @@ router.get("/reports/profit", async (req, res): Promise<void> => {
   if (groupBy === "daily") {
     periodExpr = sql`${invoicesTable.date}`;
   } else if (groupBy === "yearly") {
-    periodExpr = sql`extract(year from ${invoicesTable.date}::date)::text`;
+    periodExpr = sql`strftime('%Y', ${invoicesTable.date})`;
   } else {
-    periodExpr = sql`to_char(${invoicesTable.date}::date, 'YYYY-MM')`;
+    periodExpr = sql`strftime('%Y-%m', ${invoicesTable.date})`;
   }
 
   const results = await db.select({

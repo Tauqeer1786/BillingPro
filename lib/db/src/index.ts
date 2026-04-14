@@ -1,16 +1,73 @@
-import { drizzle } from "drizzle-orm/node-postgres";
-import pg from "pg";
+import { drizzle } from "drizzle-orm/better-sqlite3";
+import Database from "better-sqlite3";
+import path from "path";
+import { fileURLToPath } from "url";
 import * as schema from "./schema";
 
-const { Pool } = pg;
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const DB_PATH = process.env.DB_PATH || path.resolve(__dirname, "../../../billing.db");
 
-if (!process.env.DATABASE_URL) {
-  throw new Error(
-    "DATABASE_URL must be set. Did you forget to provision a database?",
-  );
+const sqlite = new Database(DB_PATH);
+sqlite.pragma("journal_mode = WAL");
+sqlite.pragma("foreign_keys = ON");
+
+export const db = drizzle(sqlite, { schema });
+
+export function initializeDb() {
+  sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS products (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      cost_price REAL NOT NULL,
+      margin_percent REAL NOT NULL,
+      selling_price REAL NOT NULL,
+      gst_percent REAL NOT NULL,
+      stock INTEGER NOT NULL DEFAULT 0,
+      hsn TEXT,
+      unit TEXT DEFAULT 'pcs',
+      created_at INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS customers (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      phone TEXT,
+      email TEXT,
+      address TEXT,
+      gstin TEXT,
+      created_at INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS invoices (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      invoice_number TEXT NOT NULL UNIQUE,
+      customer_id INTEGER REFERENCES customers(id) ON DELETE SET NULL,
+      date TEXT NOT NULL,
+      subtotal REAL NOT NULL DEFAULT 0,
+      total_gst REAL NOT NULL DEFAULT 0,
+      total_discount REAL NOT NULL DEFAULT 0,
+      grand_total REAL NOT NULL DEFAULT 0,
+      total_profit REAL NOT NULL DEFAULT 0,
+      notes TEXT,
+      created_at INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS invoice_items (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      invoice_id INTEGER NOT NULL REFERENCES invoices(id) ON DELETE CASCADE,
+      product_id INTEGER NOT NULL REFERENCES products(id),
+      product_name TEXT NOT NULL,
+      quantity INTEGER NOT NULL,
+      unit_price REAL NOT NULL,
+      cost_price REAL NOT NULL DEFAULT 0,
+      gst_percent REAL NOT NULL,
+      gst_amount REAL NOT NULL,
+      discount_percent REAL DEFAULT 0,
+      discount_amount REAL DEFAULT 0,
+      total_amount REAL NOT NULL,
+      profit REAL DEFAULT 0
+    );
+  `);
 }
-
-export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-export const db = drizzle(pool, { schema });
 
 export * from "./schema";
