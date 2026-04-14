@@ -1,0 +1,62 @@
+{
+  "version": "1.0",
+  "exportedAt": "2026-04-14T02:41:32.587Z",
+  "autoBackup": true,
+  "products": [
+    {
+      "id": 1,
+      "name": "Test Item",
+      "costPrice": 100,
+      "marginPercent": 20,
+      "sellingPrice": 120,
+      "gstPercent": 18,
+      "stock": 48,
+      "hsn": null,
+      "unit": "pcs",
+      "createdAt": "2026-04-14T02:37:51.000Z"
+    }
+  ],
+  "customers": [
+    {
+      "id": 1,
+      "name": "Test Customer",
+      "phone": "9876543210",
+      "email": "test@example.com",
+      "address": null,
+      "gstin": null,
+      "createdAt": "2026-04-14T02:37:51.000Z"
+    }
+  ],
+  "invoices": [
+    {
+      "id": 1,
+      "invoiceNumber": "INV-2026-2027-0001",
+      "customerId": 1,
+      "date": "2026-04-14",
+      "subtotal": 240,
+      "totalGst": 43.2,
+      "totalDiscount": 0,
+      "grandTotal": 283.2,
+      "totalProfit": 40,
+      "notes": "Test invoice",
+      "createdAt": "2026-04-14T02:38:09.000Z"
+    }
+  ],
+  "invoiceItems": [
+    {
+      "id": 1,
+      "invoiceId": 1,
+      "productId": 1,
+      "productName": "Test Item",
+      "quantity": 2,
+      "unitPrice": 120,
+      "costPrice": 100,
+      "gstPercent": 18,
+      "gstAmount": 43.2,
+      "discountPercent": 0,
+      "discountAmount": 0,
+      "totalAmount": 283.2,
+      "profit": 40
+    }
+  ]
+}

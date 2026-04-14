@@ -1,8 +1,10 @@
 import app from "./app";
 import { logger } from "./lib/logger";
 import { initializeDb } from "@workspace/db";
+import { startBackupScheduler } from "./lib/backup-scheduler";
 
 initializeDb();
+startBackupScheduler();
 
 const rawPort = process.env["PORT"];
 

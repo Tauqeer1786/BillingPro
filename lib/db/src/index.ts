@@ -5,7 +5,7 @@ import { fileURLToPath } from "url";
 import * as schema from "./schema";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const DB_PATH = process.env.DB_PATH || path.resolve(__dirname, "../../../billing.db");
+export const DB_PATH = process.env.DB_PATH || path.resolve(__dirname, "../../../billing.db");
 
 const sqlite = new Database(DB_PATH);
 sqlite.pragma("journal_mode = WAL");
