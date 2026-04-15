@@ -2,7 +2,7 @@ import { useGetDashboardSummary, useGetRecentTransactions, useGetTopProducts, us
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatCurrency, formatDate } from "@/lib/format";
-import { FileText, IndianRupee, Users, Package } from "lucide-react";
+import { FileText, IndianRupee, Users, AlertCircle } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { Link } from "wouter";
@@ -46,11 +46,11 @@ export function Dashboard() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Profit</CardTitle>
-            <IndianRupee className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Outstanding Due</CardTitle>
+            <AlertCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-emerald-600">{formatCurrency(summary?.totalProfit || 0)}</div>
+            <div className="text-2xl font-bold text-orange-600">{formatCurrency(summary?.totalOutstanding || 0)}</div>
           </CardContent>
         </Card>
         <Card>
@@ -161,6 +161,7 @@ export function Dashboard() {
                 <TableHead>Invoice #</TableHead>
                 <TableHead>Customer</TableHead>
                 <TableHead>Date</TableHead>
+                <TableHead>Status</TableHead>
                 <TableHead className="text-right">Amount</TableHead>
               </TableRow>
             </TableHeader>
@@ -174,10 +175,11 @@ export function Dashboard() {
                   </TableCell>
                   <TableCell>{t.customerName || "Walk-in"}</TableCell>
                   <TableCell>{formatDate(t.date)}</TableCell>
+                  <TableCell>{t.paymentStatus === "paid" ? "Paid" : "Due / Unpaid"}</TableCell>
                   <TableCell className="text-right font-semibold">{formatCurrency(t.grandTotal)}</TableCell>
                 </TableRow>
               )) : (
-                <TableRow><TableCell colSpan={4} className="text-center py-4 text-muted-foreground">No transactions yet</TableCell></TableRow>
+                <TableRow><TableCell colSpan={5} className="text-center py-4 text-muted-foreground">No transactions yet</TableCell></TableRow>
               )}
             </TableBody>
           </Table>

@@ -43,6 +43,7 @@ router.get("/dashboard/summary", async (req, res): Promise<void> => {
     totalSales: sql<number>`coalesce(sum(${invoicesTable.grandTotal}), 0)`,
     totalProfit: sql<number>`coalesce(sum(${invoicesTable.totalProfit}), 0)`,
     totalGst: sql<number>`coalesce(sum(${invoicesTable.totalGst}), 0)`,
+    totalOutstanding: sql<number>`coalesce(sum(case when ${invoicesTable.paymentStatus} = 'unpaid' then ${invoicesTable.grandTotal} else 0 end), 0)`,
     totalInvoices: sql<number>`count(*)`,
   }).from(invoicesTable).where(fyCondition);
 
@@ -53,6 +54,7 @@ router.get("/dashboard/summary", async (req, res): Promise<void> => {
     totalSales: Number(salesData.totalSales),
     totalProfit: Number(salesData.totalProfit),
     totalGst: Number(salesData.totalGst),
+    totalOutstanding: Number(salesData.totalOutstanding),
     totalInvoices: Number(salesData.totalInvoices),
     totalCustomers: Number(customerCount.count),
     totalProducts: Number(productCount.count),
@@ -69,6 +71,7 @@ router.get("/dashboard/recent-transactions", async (req, res): Promise<void> => 
     invoiceNumber: invoicesTable.invoiceNumber,
     customerId: invoicesTable.customerId,
     date: invoicesTable.date,
+    paymentStatus: invoicesTable.paymentStatus,
     grandTotal: invoicesTable.grandTotal,
     totalProfit: invoicesTable.totalProfit,
     createdAt: invoicesTable.createdAt,
@@ -92,7 +95,9 @@ router.get("/dashboard/recent-transactions", async (req, res): Promise<void> => 
     invoiceNumber: i.invoiceNumber,
     customerName: i.customerId ? customerNames[i.customerId] || "" : "Walk-in",
     date: i.date,
+    paymentStatus: i.paymentStatus,
     grandTotal: i.grandTotal,
+    outstandingAmount: i.paymentStatus === "unpaid" ? i.grandTotal : 0,
     totalProfit: i.totalProfit,
     itemCount: 0,
     createdAt: i.createdAt instanceof Date ? i.createdAt.toISOString() : String(i.createdAt),

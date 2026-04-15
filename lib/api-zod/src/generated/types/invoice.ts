@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { InvoiceItem } from "./invoiceItem";
+import type { InvoicePaymentStatus } from "./invoicePaymentStatus";
 
 export interface Invoice {
   id: number;
@@ -13,11 +14,13 @@ export interface Invoice {
   customerId?: number;
   customerName?: string;
   date: string;
+  paymentStatus: InvoicePaymentStatus;
   items: InvoiceItem[];
   subtotal: number;
   totalGst: number;
   totalDiscount: number;
   grandTotal: number;
+  outstandingAmount: number;
   totalProfit?: number;
   notes?: string;
   createdAt: string;

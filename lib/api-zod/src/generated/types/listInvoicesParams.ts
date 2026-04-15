@@ -5,11 +5,13 @@
  * Billing application API
  * OpenAPI spec version: 0.1.0
  */
+import type { ListInvoicesStatus } from "./listInvoicesStatus";
 
 export type ListInvoicesParams = {
   customerId?: number;
   startDate?: string;
   endDate?: string;
+  status?: ListInvoicesStatus;
   page?: number;
   limit?: number;
 };

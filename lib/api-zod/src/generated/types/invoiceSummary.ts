@@ -5,13 +5,16 @@
  * Billing application API
  * OpenAPI spec version: 0.1.0
  */
+import type { InvoiceSummaryPaymentStatus } from "./invoiceSummaryPaymentStatus";
 
 export interface InvoiceSummary {
   id: number;
   invoiceNumber: string;
   customerName?: string;
   date: string;
+  paymentStatus: InvoiceSummaryPaymentStatus;
   grandTotal: number;
+  outstandingAmount: number;
   totalProfit?: number;
   itemCount?: number;
   createdAt: string;

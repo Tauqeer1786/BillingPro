@@ -12,4 +12,5 @@ export interface InvoiceListResponse {
   total: number;
   page: number;
   limit: number;
+  outstandingTotal?: number;
 }

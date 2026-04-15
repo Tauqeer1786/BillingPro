@@ -43,6 +43,7 @@ import type {
   ImportResult,
   Invoice,
   InvoiceListResponse,
+  InvoiceStatusResponse,
   InvoiceSummary,
   ListCustomersParams,
   ListInvoicesParams,
@@ -56,6 +57,7 @@ import type {
   TopCustomer,
   TopProduct,
   UpdateCustomerBody,
+  UpdateInvoiceStatusBody,
   UpdateProductBody,
 } from "./api.schemas";
 
@@ -1456,6 +1458,93 @@ export const useDeleteInvoice = <
   TContext
 > => {
   return useMutation(getDeleteInvoiceMutationOptions(options));
+};
+
+/**
+ * @summary Mark an invoice as paid or unpaid
+ */
+export const getUpdateInvoiceStatusUrl = (id: number) => {
+  return `/api/invoices/${id}/status`;
+};
+
+export const updateInvoiceStatus = async (
+  id: number,
+  updateInvoiceStatusBody: UpdateInvoiceStatusBody,
+  options?: RequestInit,
+): Promise<InvoiceStatusResponse> => {
+  return customFetch<InvoiceStatusResponse>(getUpdateInvoiceStatusUrl(id), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(updateInvoiceStatusBody),
+  });
+};
+
+export const getUpdateInvoiceStatusMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateInvoiceStatus>>,
+    TError,
+    { id: number; data: BodyType<UpdateInvoiceStatusBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateInvoiceStatus>>,
+  TError,
+  { id: number; data: BodyType<UpdateInvoiceStatusBody> },
+  TContext
+> => {
+  const mutationKey = ["updateInvoiceStatus"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateInvoiceStatus>>,
+    { id: number; data: BodyType<UpdateInvoiceStatusBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updateInvoiceStatus(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateInvoiceStatusMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateInvoiceStatus>>
+>;
+export type UpdateInvoiceStatusMutationBody = BodyType<UpdateInvoiceStatusBody>;
+export type UpdateInvoiceStatusMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Mark an invoice as paid or unpaid
+ */
+export const useUpdateInvoiceStatus = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateInvoiceStatus>>,
+    TError,
+    { id: number; data: BodyType<UpdateInvoiceStatusBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateInvoiceStatus>>,
+  TError,
+  { id: number; data: BodyType<UpdateInvoiceStatusBody> },
+  TContext
+> => {
+  return useMutation(getUpdateInvoiceStatusMutationOptions(options));
 };
 
 /**

@@ -6,6 +6,8 @@ import {
   CreateInvoiceBody,
   GetInvoiceParams,
   DeleteInvoiceParams,
+  UpdateInvoiceStatusBody,
+  UpdateInvoiceStatusParams,
 } from "@workspace/api-zod";
 
 const router: IRouter = Router();
@@ -31,22 +33,27 @@ router.get("/invoices", async (req, res): Promise<void> => {
     return;
   }
 
-  const { customerId, startDate, endDate, page = 1, limit = 50 } = params.data;
+  const { customerId, startDate, endDate, status, page = 1, limit = 50 } = params.data;
   const offset = (page - 1) * limit;
 
   const conditions = [];
   if (customerId) conditions.push(eq(invoicesTable.customerId, customerId));
   if (startDate) conditions.push(gte(invoicesTable.date, startDate));
   if (endDate) conditions.push(lte(invoicesTable.date, endDate));
+  if (status) conditions.push(eq(invoicesTable.paymentStatus, status));
 
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
-  const [invoices, [{ count: total }]] = await Promise.all([
+  const outstandingConditions = [...conditions.filter(condition => condition !== undefined), eq(invoicesTable.paymentStatus, "unpaid" as const)];
+  const outstandingWhereClause = outstandingConditions.length > 0 ? and(...outstandingConditions) : undefined;
+
+  const [invoices, [{ count: total }], [outstanding]] = await Promise.all([
     db.select({
       id: invoicesTable.id,
       invoiceNumber: invoicesTable.invoiceNumber,
       customerId: invoicesTable.customerId,
       date: invoicesTable.date,
+      paymentStatus: invoicesTable.paymentStatus,
       grandTotal: invoicesTable.grandTotal,
       totalProfit: invoicesTable.totalProfit,
       createdAt: invoicesTable.createdAt,
@@ -56,6 +63,7 @@ router.get("/invoices", async (req, res): Promise<void> => {
       .limit(limit)
       .offset(offset),
     db.select({ count: sql<number>`count(*)` }).from(invoicesTable).where(whereClause),
+    db.select({ total: sql<number>`coalesce(sum(${invoicesTable.grandTotal}), 0)` }).from(invoicesTable).where(outstandingWhereClause),
   ]);
 
   const invoiceIds = invoices.map(i => i.id);
@@ -89,12 +97,15 @@ router.get("/invoices", async (req, res): Promise<void> => {
       invoiceNumber: i.invoiceNumber,
       customerName: i.customerId ? customerNames[i.customerId] || "" : "",
       date: i.date,
+      paymentStatus: i.paymentStatus,
       grandTotal: i.grandTotal,
+      outstandingAmount: i.paymentStatus === "unpaid" ? i.grandTotal : 0,
       totalProfit: i.totalProfit,
       itemCount: itemCounts[i.id] || 0,
       createdAt: i.createdAt.toISOString(),
     })),
     total: Number(total),
+    outstandingTotal: Number(outstanding.total),
     page,
     limit,
   });
@@ -203,6 +214,7 @@ router.post("/invoices", async (req, res): Promise<void> => {
     customerId: invoice.customerId,
     customerName,
     date: invoice.date,
+    paymentStatus: invoice.paymentStatus,
     items: insertedItems.map(i => ({
       id: i.id,
       productId: i.productId,
@@ -221,6 +233,7 @@ router.post("/invoices", async (req, res): Promise<void> => {
     totalGst: invoice.totalGst,
     totalDiscount: invoice.totalDiscount,
     grandTotal: invoice.grandTotal,
+    outstandingAmount: invoice.paymentStatus === "unpaid" ? invoice.grandTotal : 0,
     totalProfit: invoice.totalProfit,
     notes: invoice.notes,
     createdAt: invoice.createdAt.toISOString(),
@@ -254,6 +267,7 @@ router.get("/invoices/:id", async (req, res): Promise<void> => {
     customerId: invoice.customerId,
     customerName,
     date: invoice.date,
+    paymentStatus: invoice.paymentStatus,
     items: items.map(i => ({
       id: i.id,
       productId: i.productId,
@@ -272,9 +286,39 @@ router.get("/invoices/:id", async (req, res): Promise<void> => {
     totalGst: invoice.totalGst,
     totalDiscount: invoice.totalDiscount,
     grandTotal: invoice.grandTotal,
+    outstandingAmount: invoice.paymentStatus === "unpaid" ? invoice.grandTotal : 0,
     totalProfit: invoice.totalProfit,
     notes: invoice.notes,
     createdAt: invoice.createdAt.toISOString(),
+  });
+});
+
+router.patch("/invoices/:id/status", async (req, res): Promise<void> => {
+  const params = UpdateInvoiceStatusParams.safeParse(req.params);
+  const parsed = UpdateInvoiceStatusBody.safeParse(req.body);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+
+  const [invoice] = await db.update(invoicesTable)
+    .set({ paymentStatus: parsed.data.paymentStatus })
+    .where(eq(invoicesTable.id, params.data.id))
+    .returning();
+
+  if (!invoice) {
+    res.status(404).json({ error: "Invoice not found" });
+    return;
+  }
+
+  res.json({
+    id: invoice.id,
+    paymentStatus: invoice.paymentStatus,
+    outstandingAmount: invoice.paymentStatus === "unpaid" ? invoice.grandTotal : 0,
   });
 });
 

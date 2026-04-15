@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useBusinessProfile } from "@/hooks/use-business-profile";
 import {
@@ -272,6 +273,26 @@ export function Settings() {
           <div className="space-y-1.5">
             <Label>Terms & Conditions</Label>
             <Input value={localProfile.termsAndConditions} onChange={e => setLocalProfile(p => ({ ...p, termsAndConditions: e.target.value }))} placeholder="Goods once sold will not be taken back. E & O.E." />
+          </div>
+
+          <div className="border-t pt-4">
+            <div className="grid sm:grid-cols-2 gap-4 items-end">
+              <div className="space-y-1.5">
+                <Label>Invoice Print Page Size</Label>
+                <Select value={localProfile.printPageSize} onValueChange={value => setLocalProfile(p => ({ ...p, printPageSize: value as "A4" | "A5" }))}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="A4">A4 - Standard full-page invoice</SelectItem>
+                    <SelectItem value="A5">A5 - Compact half-page invoice</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                This controls the page size used by invoice Print and Download PDF.
+              </p>
+            </div>
           </div>
 
           <Button onClick={handleProfileSave} className="w-full sm:w-auto">

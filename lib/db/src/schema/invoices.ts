@@ -9,6 +9,7 @@ export const invoicesTable = sqliteTable("invoices", {
   invoiceNumber: text("invoice_number").notNull().unique(),
   customerId: integer("customer_id").references(() => customersTable.id, { onDelete: "set null" }),
   date: text("date").notNull(),
+  paymentStatus: text("payment_status", { enum: ["paid", "unpaid"] }).notNull().default("unpaid"),
   subtotal: real("subtotal").notNull().default(0),
   totalGst: real("total_gst").notNull().default(0),
   totalDiscount: real("total_discount").notNull().default(0),

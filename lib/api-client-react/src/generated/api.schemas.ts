@@ -60,12 +60,22 @@ export interface Customer {
   createdAt: string;
 }
 
+export type InvoiceSummaryPaymentStatus =
+  (typeof InvoiceSummaryPaymentStatus)[keyof typeof InvoiceSummaryPaymentStatus];
+
+export const InvoiceSummaryPaymentStatus = {
+  paid: "paid",
+  unpaid: "unpaid",
+} as const;
+
 export interface InvoiceSummary {
   id: number;
   invoiceNumber: string;
   customerName?: string;
   date: string;
+  paymentStatus: InvoiceSummaryPaymentStatus;
   grandTotal: number;
+  outstandingAmount: number;
   totalProfit?: number;
   itemCount?: number;
   createdAt: string;
@@ -128,17 +138,27 @@ export interface CreateInvoiceItem {
   discountPercent?: number;
 }
 
+export type InvoicePaymentStatus =
+  (typeof InvoicePaymentStatus)[keyof typeof InvoicePaymentStatus];
+
+export const InvoicePaymentStatus = {
+  paid: "paid",
+  unpaid: "unpaid",
+} as const;
+
 export interface Invoice {
   id: number;
   invoiceNumber: string;
   customerId?: number;
   customerName?: string;
   date: string;
+  paymentStatus: InvoicePaymentStatus;
   items: InvoiceItem[];
   subtotal: number;
   totalGst: number;
   totalDiscount: number;
   grandTotal: number;
+  outstandingAmount: number;
   totalProfit?: number;
   notes?: string;
   createdAt: string;
@@ -152,17 +172,45 @@ export interface CreateInvoiceBody {
   overallDiscountPercent?: number;
 }
 
+export type UpdateInvoiceStatusBodyPaymentStatus =
+  (typeof UpdateInvoiceStatusBodyPaymentStatus)[keyof typeof UpdateInvoiceStatusBodyPaymentStatus];
+
+export const UpdateInvoiceStatusBodyPaymentStatus = {
+  paid: "paid",
+  unpaid: "unpaid",
+} as const;
+
+export interface UpdateInvoiceStatusBody {
+  paymentStatus: UpdateInvoiceStatusBodyPaymentStatus;
+}
+
+export type InvoiceStatusResponsePaymentStatus =
+  (typeof InvoiceStatusResponsePaymentStatus)[keyof typeof InvoiceStatusResponsePaymentStatus];
+
+export const InvoiceStatusResponsePaymentStatus = {
+  paid: "paid",
+  unpaid: "unpaid",
+} as const;
+
+export interface InvoiceStatusResponse {
+  id: number;
+  paymentStatus: InvoiceStatusResponsePaymentStatus;
+  outstandingAmount: number;
+}
+
 export interface InvoiceListResponse {
   invoices: InvoiceSummary[];
   total: number;
   page: number;
   limit: number;
+  outstandingTotal?: number;
 }
 
 export interface DashboardSummary {
   totalSales: number;
   totalProfit: number;
   totalGst?: number;
+  totalOutstanding?: number;
   totalInvoices: number;
   totalCustomers: number;
   totalProducts: number;
@@ -310,9 +358,18 @@ export type ListInvoicesParams = {
   customerId?: number;
   startDate?: string;
   endDate?: string;
+  status?: ListInvoicesStatus;
   page?: number;
   limit?: number;
 };
+
+export type ListInvoicesStatus =
+  (typeof ListInvoicesStatus)[keyof typeof ListInvoicesStatus];
+
+export const ListInvoicesStatus = {
+  paid: "paid",
+  unpaid: "unpaid",
+} as const;
 
 export type GetDashboardSummaryParams = {
   /**

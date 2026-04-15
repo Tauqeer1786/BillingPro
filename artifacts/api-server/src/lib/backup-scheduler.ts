@@ -59,6 +59,7 @@ export async function performBackup(): Promise<string> {
       invoiceNumber: i.invoiceNumber,
       customerId: i.customerId,
       date: i.date,
+      paymentStatus: i.paymentStatus,
       subtotal: i.subtotal,
       totalGst: i.totalGst,
       totalDiscount: i.totalDiscount,

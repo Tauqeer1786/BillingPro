@@ -43,6 +43,7 @@ export function initializeDb() {
       invoice_number TEXT NOT NULL UNIQUE,
       customer_id INTEGER REFERENCES customers(id) ON DELETE SET NULL,
       date TEXT NOT NULL,
+      payment_status TEXT NOT NULL DEFAULT 'unpaid',
       subtotal REAL NOT NULL DEFAULT 0,
       total_gst REAL NOT NULL DEFAULT 0,
       total_discount REAL NOT NULL DEFAULT 0,
@@ -68,6 +69,11 @@ export function initializeDb() {
       profit REAL DEFAULT 0
     );
   `);
+
+  const invoiceColumns = sqlite.prepare("PRAGMA table_info(invoices)").all() as Array<{ name: string }>;
+  if (!invoiceColumns.some(column => column.name === "payment_status")) {
+    sqlite.exec("ALTER TABLE invoices ADD COLUMN payment_status TEXT NOT NULL DEFAULT 'unpaid'");
+  }
 }
 
 export * from "./schema";

@@ -287,6 +287,11 @@ paths:
           in: query
           schema:
             type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [paid, unpaid]
         - name: page
           in: query
           schema:
@@ -357,6 +362,31 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/DeleteResponse"
+
+  /invoices/{id}/status:
+    patch:
+      operationId: updateInvoiceStatus
+      tags: [invoices]
+      summary: Mark an invoice as paid or unpaid
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateInvoiceStatusBody"
+      responses:
+        "200":
+          description: Updated status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InvoiceStatusResponse"
 
   # ── Dashboard ──
   /dashboard/summary:
@@ -873,7 +903,7 @@ components:
 
     Invoice:
       type: object
-      required: [id, invoiceNumber, date, items, subtotal, totalGst, totalDiscount, grandTotal, createdAt]
+      required: [id, invoiceNumber, date, paymentStatus, items, subtotal, totalGst, totalDiscount, grandTotal, outstandingAmount, createdAt]
       properties:
         id:
           type: integer
@@ -885,6 +915,9 @@ components:
           type: string
         date:
           type: string
+        paymentStatus:
+          type: string
+          enum: [paid, unpaid]
         items:
           type: array
           items:
@@ -896,6 +929,8 @@ components:
         totalDiscount:
           type: number
         grandTotal:
+          type: number
+        outstandingAmount:
           type: number
         totalProfit:
           type: number
@@ -922,9 +957,29 @@ components:
           type: number
           default: 0
 
+    UpdateInvoiceStatusBody:
+      type: object
+      required: [paymentStatus]
+      properties:
+        paymentStatus:
+          type: string
+          enum: [paid, unpaid]
+
+    InvoiceStatusResponse:
+      type: object
+      required: [id, paymentStatus, outstandingAmount]
+      properties:
+        id:
+          type: integer
+        paymentStatus:
+          type: string
+          enum: [paid, unpaid]
+        outstandingAmount:
+          type: number
+
     InvoiceSummary:
       type: object
-      required: [id, invoiceNumber, date, grandTotal, createdAt]
+      required: [id, invoiceNumber, date, paymentStatus, grandTotal, outstandingAmount, createdAt]
       properties:
         id:
           type: integer
@@ -934,7 +989,12 @@ components:
           type: string
         date:
           type: string
+        paymentStatus:
+          type: string
+          enum: [paid, unpaid]
         grandTotal:
+          type: number
+        outstandingAmount:
           type: number
         totalProfit:
           type: number
@@ -957,6 +1017,8 @@ components:
           type: integer
         limit:
           type: integer
+        outstandingTotal:
+          type: number
 
     DashboardSummary:
       type: object
@@ -967,6 +1029,8 @@ components:
         totalProfit:
           type: number
         totalGst:
+          type: number
+        totalOutstanding:
           type: number
         totalInvoices:
           type: integer

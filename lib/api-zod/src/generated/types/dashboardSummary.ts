@@ -10,6 +10,7 @@ export interface DashboardSummary {
   totalSales: number;
   totalProfit: number;
   totalGst?: number;
+  totalOutstanding?: number;
   totalInvoices: number;
   totalCustomers: number;
   totalProducts: number;

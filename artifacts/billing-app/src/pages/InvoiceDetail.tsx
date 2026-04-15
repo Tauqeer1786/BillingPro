@@ -1,8 +1,10 @@
-import { useGetInvoice, getGetInvoiceQueryKey } from "@workspace/api-client-react";
+import { customFetch, useGetInvoice, getGetInvoiceQueryKey } from "@workspace/api-client-react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatCurrency, formatDate } from "@/lib/format";
-import { ArrowLeft, Download } from "lucide-react";
+import { ArrowLeft, Download, Printer } from "lucide-react";
 import { Link } from "wouter";
 import { useBusinessProfile } from "@/hooks/use-business-profile";
 import { useRef } from "react";
@@ -11,6 +13,19 @@ export function InvoiceDetail({ id }: { id: number }) {
   const { data: invoice, isLoading } = useGetInvoice(id, { query: { enabled: !!id, queryKey: getGetInvoiceQueryKey(id) } });
   const { profile } = useBusinessProfile();
   const printRef = useRef<HTMLDivElement>(null);
+  const queryClient = useQueryClient();
+
+  const updateStatus = useMutation({
+    mutationFn: (paymentStatus: "paid" | "unpaid") =>
+      customFetch(`/api/invoices/${id}/status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ paymentStatus }),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries();
+    },
+  });
 
   if (isLoading) {
     return (
@@ -29,6 +44,10 @@ export function InvoiceDetail({ id }: { id: number }) {
     const content = printRef.current;
     if (!content) return;
 
+    const isA5 = profile.printPageSize === "A5";
+    const pageWidth = isA5 ? "148mm" : "210mm";
+    const pageHeight = isA5 ? "210mm" : "297mm";
+    const pagePadding = isA5 ? "18px" : "32px";
     const printWindow = window.open("", "_blank", "width=900,height=700");
     if (!printWindow) return;
 
@@ -40,8 +59,9 @@ export function InvoiceDetail({ id }: { id: number }) {
           <meta charset="utf-8" />
           <style>
             * { margin: 0; padding: 0; box-sizing: border-box; }
-            body { font-family: Arial, sans-serif; font-size: 13px; color: #111; background: #fff; }
-            .invoice-wrap { max-width: 860px; margin: 0 auto; padding: 32px; }
+            body { font-family: Arial, sans-serif; font-size: ${isA5 ? "11px" : "13px"}; color: #111; background: #f5f5f5; }
+            .invoice-print-body { width: ${pageWidth}; min-height: ${pageHeight}; margin: 0 auto; padding: ${pagePadding} !important; background: #fff; }
+            .invoice-wrap { max-width: 860px; margin: 0 auto; padding: ${pagePadding}; }
 
             .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #1a1a1a; padding-bottom: 20px; margin-bottom: 20px; }
             .business-name { font-size: 24px; font-weight: 800; color: #1a1a1a; letter-spacing: -0.5px; }
@@ -91,7 +111,11 @@ export function InvoiceDetail({ id }: { id: number }) {
             .footer-terms { font-size: 11px; color: #888; max-width: 400px; line-height: 1.5; }
             .footer-sign { text-align: right; font-size: 12px; color: #444; }
             .footer-sign .sign-line { border-top: 1px solid #999; margin-top: 40px; padding-top: 6px; font-size: 11px; color: #888; }
-            @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+            @page { size: ${profile.printPageSize}; margin: 10mm; }
+            @media print {
+              body { background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+              .invoice-print-body { width: auto; min-height: auto; margin: 0; padding: 0 !important; }
+            }
           </style>
         </head>
         <body>${content.innerHTML}</body>
@@ -118,9 +142,21 @@ export function InvoiceDetail({ id }: { id: number }) {
           </Link>
           <h1 className="text-3xl font-bold tracking-tight">Invoice {invoice.invoiceNumber}</h1>
         </div>
-        <Button onClick={handlePrint}>
-          <Download className="w-4 h-4 mr-2" />Print / Download PDF
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => updateStatus.mutate(invoice.paymentStatus === "paid" ? "unpaid" : "paid")}
+            disabled={updateStatus.isPending}
+          >
+            Mark {invoice.paymentStatus === "paid" ? "Unpaid" : "Paid"}
+          </Button>
+          <Button variant="outline" onClick={handlePrint}>
+            <Printer className="w-4 h-4 mr-2" />Print
+          </Button>
+          <Button onClick={handlePrint}>
+            <Download className="w-4 h-4 mr-2" />Download PDF
+          </Button>
+        </div>
       </div>
 
       <div className="bg-white border rounded-xl shadow-sm overflow-hidden">
@@ -140,6 +176,9 @@ export function InvoiceDetail({ id }: { id: number }) {
               <div style={{ fontSize: "26px", fontWeight: 800, letterSpacing: "2px", color: "#1a1a1a" }}>INVOICE</div>
               <div style={{ fontWeight: 600, color: "#444", marginTop: "4px" }}>{invoice.invoiceNumber}</div>
               <div style={{ fontSize: "12px", color: "#666", marginTop: "2px" }}>Date: {formatDate(invoice.date)}</div>
+              <div style={{ display: "inline-block", marginTop: "8px", padding: "4px 10px", borderRadius: "999px", fontSize: "11px", fontWeight: 700, color: invoice.paymentStatus === "paid" ? "#166534" : "#9a3412", background: invoice.paymentStatus === "paid" ? "#dcfce7" : "#ffedd5" }}>
+                {invoice.paymentStatus === "paid" ? "PAID" : "DUE / UNPAID"}
+              </div>
             </div>
           </div>
 
@@ -153,6 +192,7 @@ export function InvoiceDetail({ id }: { id: number }) {
               <div style={{ fontSize: "13px", color: "#333", lineHeight: "1.7" }}>
                 <div>Invoice #: <strong>{invoice.invoiceNumber}</strong></div>
                 <div>Date: <strong>{formatDate(invoice.date)}</strong></div>
+                <div>Status: <strong>{invoice.paymentStatus === "paid" ? "Paid" : "Due / Unpaid"}</strong></div>
               </div>
             </div>
           </div>
@@ -204,6 +244,10 @@ export function InvoiceDetail({ id }: { id: number }) {
               <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 14px", background: "#1a1a1a", color: "#fff", fontWeight: 700, fontSize: "15px" }}>
                 <span style={{ color: "#ccc" }}>Grand Total</span>
                 <span>{formatCurrency(invoice.grandTotal)}</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 14px", background: invoice.paymentStatus === "paid" ? "#dcfce7" : "#ffedd5", color: invoice.paymentStatus === "paid" ? "#166534" : "#9a3412", fontWeight: 700, fontSize: "14px" }}>
+                <span>Outstanding Due</span>
+                <span>{formatCurrency(invoice.outstandingAmount)}</span>
               </div>
             </div>
           </div>

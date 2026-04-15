@@ -186,7 +186,9 @@ export const GetCustomerResponse = zod.object({
       invoiceNumber: zod.string(),
       customerName: zod.string().optional(),
       date: zod.string(),
+      paymentStatus: zod.enum(["paid", "unpaid"]),
       grandTotal: zod.number(),
+      outstandingAmount: zod.number(),
       totalProfit: zod.number().optional(),
       itemCount: zod.number().optional(),
       createdAt: zod.string(),
@@ -244,7 +246,9 @@ export const GetCustomerPurchasesResponseItem = zod.object({
   invoiceNumber: zod.string(),
   customerName: zod.string().optional(),
   date: zod.string(),
+  paymentStatus: zod.enum(["paid", "unpaid"]),
   grandTotal: zod.number(),
+  outstandingAmount: zod.number(),
   totalProfit: zod.number().optional(),
   itemCount: zod.number().optional(),
   createdAt: zod.string(),
@@ -263,6 +267,7 @@ export const ListInvoicesQueryParams = zod.object({
   customerId: zod.coerce.number().optional(),
   startDate: zod.coerce.string().optional(),
   endDate: zod.coerce.string().optional(),
+  status: zod.enum(["paid", "unpaid"]).optional(),
   page: zod.coerce.number().default(listInvoicesQueryPageDefault),
   limit: zod.coerce.number().default(listInvoicesQueryLimitDefault),
 });
@@ -274,7 +279,9 @@ export const ListInvoicesResponse = zod.object({
       invoiceNumber: zod.string(),
       customerName: zod.string().optional(),
       date: zod.string(),
+      paymentStatus: zod.enum(["paid", "unpaid"]),
       grandTotal: zod.number(),
+      outstandingAmount: zod.number(),
       totalProfit: zod.number().optional(),
       itemCount: zod.number().optional(),
       createdAt: zod.string(),
@@ -283,6 +290,7 @@ export const ListInvoicesResponse = zod.object({
   total: zod.number(),
   page: zod.number(),
   limit: zod.number(),
+  outstandingTotal: zod.number().optional(),
 });
 
 /**
@@ -323,6 +331,7 @@ export const GetInvoiceResponse = zod.object({
   customerId: zod.number().optional(),
   customerName: zod.string().optional(),
   date: zod.string(),
+  paymentStatus: zod.enum(["paid", "unpaid"]),
   items: zod.array(
     zod.object({
       id: zod.number().optional(),
@@ -343,6 +352,7 @@ export const GetInvoiceResponse = zod.object({
   totalGst: zod.number(),
   totalDiscount: zod.number(),
   grandTotal: zod.number(),
+  outstandingAmount: zod.number(),
   totalProfit: zod.number().optional(),
   notes: zod.string().optional(),
   createdAt: zod.string(),
@@ -361,6 +371,23 @@ export const DeleteInvoiceResponse = zod.object({
 });
 
 /**
+ * @summary Mark an invoice as paid or unpaid
+ */
+export const UpdateInvoiceStatusParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const UpdateInvoiceStatusBody = zod.object({
+  paymentStatus: zod.enum(["paid", "unpaid"]),
+});
+
+export const UpdateInvoiceStatusResponse = zod.object({
+  id: zod.number(),
+  paymentStatus: zod.enum(["paid", "unpaid"]),
+  outstandingAmount: zod.number(),
+});
+
+/**
  * @summary Get dashboard summary with totals
  */
 export const GetDashboardSummaryQueryParams = zod.object({
@@ -371,6 +398,7 @@ export const GetDashboardSummaryResponse = zod.object({
   totalSales: zod.number(),
   totalProfit: zod.number(),
   totalGst: zod.number().optional(),
+  totalOutstanding: zod.number().optional(),
   totalInvoices: zod.number(),
   totalCustomers: zod.number(),
   totalProducts: zod.number(),
@@ -391,7 +419,9 @@ export const GetRecentTransactionsResponseItem = zod.object({
   invoiceNumber: zod.string(),
   customerName: zod.string().optional(),
   date: zod.string(),
+  paymentStatus: zod.enum(["paid", "unpaid"]),
   grandTotal: zod.number(),
+  outstandingAmount: zod.number(),
   totalProfit: zod.number().optional(),
   itemCount: zod.number().optional(),
   createdAt: zod.string(),
@@ -617,6 +647,7 @@ export const ExportDatabaseResponse = zod.object({
       customerId: zod.number().optional(),
       customerName: zod.string().optional(),
       date: zod.string(),
+      paymentStatus: zod.enum(["paid", "unpaid"]),
       items: zod.array(
         zod.object({
           id: zod.number().optional(),
@@ -637,6 +668,7 @@ export const ExportDatabaseResponse = zod.object({
       totalGst: zod.number(),
       totalDiscount: zod.number(),
       grandTotal: zod.number(),
+      outstandingAmount: zod.number(),
       totalProfit: zod.number().optional(),
       notes: zod.string().optional(),
       createdAt: zod.string(),
@@ -699,6 +731,7 @@ export const ImportDatabaseBody = zod.object({
       customerId: zod.number().optional(),
       customerName: zod.string().optional(),
       date: zod.string(),
+      paymentStatus: zod.enum(["paid", "unpaid"]),
       items: zod.array(
         zod.object({
           id: zod.number().optional(),
@@ -719,6 +752,7 @@ export const ImportDatabaseBody = zod.object({
       totalGst: zod.number(),
       totalDiscount: zod.number(),
       grandTotal: zod.number(),
+      outstandingAmount: zod.number(),
       totalProfit: zod.number().optional(),
       notes: zod.string().optional(),
       createdAt: zod.string(),
