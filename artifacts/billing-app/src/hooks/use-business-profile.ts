@@ -14,16 +14,16 @@ export interface BusinessProfile {
 }
 
 const DEFAULT_PROFILE: BusinessProfile = {
-  name: "Your Business Name",
-  address: "Business Address, Street",
-  city: "City, State - PIN",
-  phone: "",
-  email: "",
-  gstin: "",
-  bankName: "",
-  bankAccount: "",
-  bankIfsc: "",
-  termsAndConditions: "Goods once sold will not be taken back. E & O.E.",
+  name: "Sharma Traders",
+  address: "12, MG Road, Laxmi Nagar",
+  city: "New Delhi, Delhi - 110092",
+  phone: "+91 98110 45678",
+  email: "sharma.traders@gmail.com",
+  gstin: "07AABCS1429B1ZX",
+  bankName: "State Bank of India",
+  bankAccount: "32145678901234",
+  bankIfsc: "SBIN0001234",
+  termsAndConditions: "Goods once sold will not be taken back. Payment due within 30 days. E & O.E.",
 };
 
 const STORAGE_KEY = "billing_business_profile";
