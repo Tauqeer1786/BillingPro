@@ -22,7 +22,7 @@ A professional billing web application for small businesses and shops in India. 
 - **Dashboard**: Total sales, profit, GST, top products/customers, monthly sales chart, recent transactions
 - **Product Management**: Add/edit/delete with auto-calculated selling price (cost + margin), GST %, stock tracking
 - **Customer Management**: Party records with GSTIN, purchase history tracking
-- **Invoicing**: Multi-item invoices, auto GST calculation, per-item and overall discounts, dynamic pricing with manual override, paid/unpaid status tracking with outstanding due amounts, A4/A5 print sizing, and PDF download via the browser print-to-PDF flow
+- **Invoicing**: Multi-item invoices, auto GST calculation, per-item and overall discounts, dynamic pricing with manual override, paid/unpaid status tracking with outstanding due amounts, A4/A5 print sizing, direct PDF download, and separate print action
 - **Reports**: Sales (daily/monthly/yearly), GST report by financial year (CGST/SGST/IGST), profit tracking with show/hide toggle, product-wise and customer-wise reports
 - **Settings**: Business profile, invoice print page size (A4/A5), database backup (JSON export), and restore (JSON import)
 - **Financial Year**: April 1 - March 31 tracking across all views
