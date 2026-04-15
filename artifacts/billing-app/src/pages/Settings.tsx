@@ -4,7 +4,10 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { useBusinessProfile } from "@/hooks/use-business-profile";
 import {
   Download,
   Upload,
@@ -16,6 +19,8 @@ import {
   FolderOpen,
   RotateCcw,
   Zap,
+  Building2,
+  Save,
 } from "lucide-react";
 
 interface AutoBackupFile {
@@ -85,6 +90,13 @@ export function Settings() {
   const queryClient = useQueryClient();
   const [importing, setImporting] = useState(false);
   const [restoringFile, setRestoringFile] = useState<string | null>(null);
+  const { profile, updateProfile } = useBusinessProfile();
+  const [localProfile, setLocalProfile] = useState(profile);
+
+  function handleProfileSave() {
+    updateProfile(localProfile);
+    toast({ title: "Business profile saved", description: "Your details will appear on all invoices." });
+  }
 
   const { refetch: fetchExport, isFetching: isExporting } = useExportDatabase({
     query: { enabled: false },
@@ -200,6 +212,74 @@ export function Settings() {
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Building2 className="w-5 h-5" />
+            Business Profile
+          </CardTitle>
+          <CardDescription>
+            This information appears on every invoice you print or download as PDF.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label>Business Name</Label>
+              <Input value={localProfile.name} onChange={e => setLocalProfile(p => ({ ...p, name: e.target.value }))} placeholder="Your Business Name" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>GSTIN</Label>
+              <Input value={localProfile.gstin} onChange={e => setLocalProfile(p => ({ ...p, gstin: e.target.value }))} placeholder="22AAAAA0000A1Z5" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Address</Label>
+              <Input value={localProfile.address} onChange={e => setLocalProfile(p => ({ ...p, address: e.target.value }))} placeholder="Street / Area" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>City, State - PIN</Label>
+              <Input value={localProfile.city} onChange={e => setLocalProfile(p => ({ ...p, city: e.target.value }))} placeholder="Mumbai, Maharashtra - 400001" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Phone</Label>
+              <Input value={localProfile.phone} onChange={e => setLocalProfile(p => ({ ...p, phone: e.target.value }))} placeholder="+91 98765 43210" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Email</Label>
+              <Input value={localProfile.email} onChange={e => setLocalProfile(p => ({ ...p, email: e.target.value }))} placeholder="you@business.com" />
+            </div>
+          </div>
+
+          <div className="border-t pt-4">
+            <p className="text-sm font-medium text-muted-foreground mb-3">Bank Details (shown on invoice)</p>
+            <div className="grid sm:grid-cols-3 gap-4">
+              <div className="space-y-1.5">
+                <Label>Bank Name</Label>
+                <Input value={localProfile.bankName} onChange={e => setLocalProfile(p => ({ ...p, bankName: e.target.value }))} placeholder="State Bank of India" />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Account Number</Label>
+                <Input value={localProfile.bankAccount} onChange={e => setLocalProfile(p => ({ ...p, bankAccount: e.target.value }))} placeholder="1234567890" />
+              </div>
+              <div className="space-y-1.5">
+                <Label>IFSC Code</Label>
+                <Input value={localProfile.bankIfsc} onChange={e => setLocalProfile(p => ({ ...p, bankIfsc: e.target.value }))} placeholder="SBIN0001234" />
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>Terms & Conditions</Label>
+            <Input value={localProfile.termsAndConditions} onChange={e => setLocalProfile(p => ({ ...p, termsAndConditions: e.target.value }))} placeholder="Goods once sold will not be taken back. E & O.E." />
+          </div>
+
+          <Button onClick={handleProfileSave} className="w-full sm:w-auto">
+            <Save className="w-4 h-4 mr-2" />
+            Save Business Profile
+          </Button>
+        </CardContent>
+      </Card>
 
       <div className="grid md:grid-cols-2 gap-6">
         <Card>
