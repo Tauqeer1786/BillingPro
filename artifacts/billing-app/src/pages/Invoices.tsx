@@ -128,9 +128,16 @@ export function Invoices() {
                     <TableCell>{formatDate(inv.date)}</TableCell>
                     <TableCell>{inv.customerName || "Walk-in"}</TableCell>
                     <TableCell>
-                      <Badge variant={inv.paymentStatus === "paid" ? "secondary" : "destructive"}>
-                        {inv.paymentStatus === "paid" ? "Paid" : "Due / Unpaid"}
-                      </Badge>
+                      <div className="flex flex-col gap-1">
+                        <Badge variant={inv.paymentStatus === "paid" ? "secondary" : "destructive"}>
+                          {inv.paymentStatus === "paid" ? "Paid" : "Due / Unpaid"}
+                        </Badge>
+                        {inv.paymentMode && (
+                          <Badge variant="outline" className="text-xs capitalize">
+                            {inv.paymentMode}
+                          </Badge>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell className="text-right">{inv.itemCount}</TableCell>
                     <TableCell className="text-right font-semibold">{formatCurrency(inv.grandTotal)}</TableCell>

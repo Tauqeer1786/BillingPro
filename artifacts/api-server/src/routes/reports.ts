@@ -261,4 +261,66 @@ router.get("/reports/customer-wise", async (req, res): Promise<void> => {
   })));
 });
 
+router.get("/reports/sales-register", async (req, res): Promise<void> => {
+  const startDate = String(req.query.startDate || "");
+  const endDate = String(req.query.endDate || "");
+
+  if (!startDate || !endDate) {
+    res.status(400).json({ error: "startDate and endDate are required" });
+    return;
+  }
+
+  const condition = and(gte(invoicesTable.date, startDate), lte(invoicesTable.date, endDate));
+
+  const invoices = await db.select({
+    id: invoicesTable.id,
+    invoiceNumber: invoicesTable.invoiceNumber,
+    date: invoicesTable.date,
+    customerId: invoicesTable.customerId,
+    grandTotal: invoicesTable.grandTotal,
+    paymentMode: invoicesTable.paymentMode,
+  }).from(invoicesTable)
+    .where(condition)
+    .orderBy(invoicesTable.date, invoicesTable.id);
+
+  const customerIds = [...new Set(invoices.filter(i => i.customerId).map(i => i.customerId!))];
+  let customerNames: Record<number, string> = {};
+  if (customerIds.length > 0) {
+    const customers = await db.select({ id: customersTable.id, name: customersTable.name })
+      .from(customersTable)
+      .where(sql`${customersTable.id} in ${customerIds}`);
+    for (const c of customers) {
+      customerNames[c.id] = c.name;
+    }
+  }
+
+  let totalCash = 0;
+  let totalCredit = 0;
+  let cashCount = 0;
+  let creditCount = 0;
+
+  const entries = invoices.map(inv => {
+    const amount = Number(inv.grandTotal);
+    const isCash = inv.paymentMode === "cash";
+    if (isCash) { totalCash += amount; cashCount++; }
+    else { totalCredit += amount; creditCount++; }
+    return {
+      invoiceNumber: inv.invoiceNumber,
+      date: inv.date,
+      partyName: inv.customerId ? customerNames[inv.customerId] || "Walk-in" : "Walk-in",
+      cashAmount: isCash ? amount : 0,
+      creditAmount: isCash ? 0 : amount,
+    };
+  });
+
+  res.json({
+    entries,
+    totalCash: Math.round(totalCash * 100) / 100,
+    totalCredit: Math.round(totalCredit * 100) / 100,
+    grandTotal: Math.round((totalCash + totalCredit) * 100) / 100,
+    cashCount,
+    creditCount,
+  });
+});
+
 export default router;

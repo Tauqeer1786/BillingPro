@@ -138,6 +138,7 @@ export function NewInvoice() {
 
   const [customerId, setCustomerId] = useState<string>("");
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
+  const [paymentMode, setPaymentMode] = useState<"cash" | "credit">("credit");
   const [notes, setNotes] = useState("");
   const [items, setItems] = useState<InvoiceLineItem[]>([]);
   const [overallDiscount, setOverallDiscount] = useState("0");
@@ -269,6 +270,7 @@ export function NewInvoice() {
         data: {
           customerId: customerId ? parseInt(customerId) : undefined,
           date,
+          paymentMode,
           items: items.map(item => ({
             productId: item.productId,
             quantity: item.quantity,
@@ -299,7 +301,7 @@ export function NewInvoice() {
         <h1 className="text-3xl font-bold tracking-tight">New Invoice</h1>
       </div>
 
-      <div className="grid md:grid-cols-3 gap-4">
+      <div className="grid md:grid-cols-4 gap-4">
         <div>
           <Label>Customer</Label>
           <Select value={customerId} onValueChange={setCustomerId}>
@@ -317,6 +319,18 @@ export function NewInvoice() {
         <div>
           <Label>Date</Label>
           <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+        </div>
+        <div>
+          <Label>Payment Mode</Label>
+          <Select value={paymentMode} onValueChange={(v) => setPaymentMode(v as "cash" | "credit")}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="cash">Cash</SelectItem>
+              <SelectItem value="credit">Credit</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         <div>
           <Label>Overall Discount %</Label>

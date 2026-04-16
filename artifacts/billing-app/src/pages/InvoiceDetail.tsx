@@ -460,6 +460,7 @@ export function InvoiceDetail({ id }: { id: number }) {
                 <div>Invoice #: <strong>{invoice.invoiceNumber}</strong></div>
                 <div>Date: <strong>{formatDate(invoice.date)}</strong></div>
                 <div>Status: <strong>{invoice.paymentStatus === "paid" ? "Paid" : "Due / Unpaid"}</strong></div>
+                {invoice.paymentMode && <div>Mode: <strong style={{ textTransform: "capitalize" }}>{invoice.paymentMode}</strong></div>}
               </div>
             </div>
           </div>

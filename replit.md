@@ -22,8 +22,9 @@ A professional billing web application for small businesses and shops in India. 
 - **Dashboard**: Total sales, profit, GST, top products/customers, monthly sales chart, recent transactions
 - **Product Management**: Add/edit/delete with auto-calculated selling price (cost + margin), GST %, stock tracking
 - **Customer Management**: Party records with GSTIN, purchase history tracking
-- **Invoicing**: Multi-item invoices, smart product autocomplete with internal-only stock visibility while creating invoices, Enter-to-add-next-row fast entry, auto GST calculation, per-item and overall discounts, dynamic pricing with manual override, paid/unpaid status tracking with outstanding due amounts, compact A4/A5 print sizing for 15+ invoice items, direct PDF download, and separate print action
-- **Reports**: Sales (daily/monthly/yearly), GST report by financial year (CGST/SGST/IGST), profit tracking with show/hide toggle, product-wise and customer-wise reports
+- **Invoicing**: Multi-item invoices, smart product autocomplete with internal-only stock visibility while creating invoices, Enter-to-add-next-row fast entry, auto GST calculation, per-item and overall discounts, dynamic pricing with manual override, paid/unpaid status tracking with outstanding due amounts, Cash/Credit payment mode selection, compact A4/A5 print sizing for 15+ invoice items, direct PDF download, and separate print action
+- **Invoice Numbering**: Sequential 3/4-digit format (001, 025, 125, 1000) with zero-padding for numbers under 100. Numbers stored as formatted strings; unique and auto-incrementing.
+- **Reports**: Sales (daily/monthly/yearly), GST report by financial year (CGST/SGST/IGST), profit tracking with show/hide toggle, product-wise and customer-wise reports, Sales Register (Cash/Credit) with date range filter, totals breakdown, and print support
 - **Settings**: Business profile, invoice print page size (A4/A5), database backup (JSON export), and restore (JSON import)
 - **Financial Year**: April 1 - March 31 tracking across all views
 
@@ -39,7 +40,7 @@ A professional billing web application for small businesses and shops in India. 
 
 - **products**: id, name, cost_price, margin_percent, selling_price, gst_percent, stock, hsn, unit
 - **customers**: id, name, phone, email, address, gstin
-- **invoices**: id, invoice_number, customer_id, date, payment_status, subtotal, total_gst, total_discount, grand_total, total_profit, notes
+- **invoices**: id, invoice_number (3/4-digit padded format), customer_id, date, payment_status, payment_mode (cash/credit), subtotal, total_gst, total_discount, grand_total, total_profit, notes
 - **invoice_items**: id, invoice_id, product_id, product_name, quantity, unit_price, cost_price, gst_percent, gst_amount, discount_percent, discount_amount, total_amount, profit
 
 ## Project Structure

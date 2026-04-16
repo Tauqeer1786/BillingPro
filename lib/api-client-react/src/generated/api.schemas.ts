@@ -74,6 +74,7 @@ export interface InvoiceSummary {
   customerName?: string;
   date: string;
   paymentStatus: InvoiceSummaryPaymentStatus;
+  paymentMode?: "cash" | "credit";
   grandTotal: number;
   outstandingAmount: number;
   totalProfit?: number;
@@ -153,6 +154,7 @@ export interface Invoice {
   customerName?: string;
   date: string;
   paymentStatus: InvoicePaymentStatus;
+  paymentMode?: "cash" | "credit";
   items: InvoiceItem[];
   subtotal: number;
   totalGst: number;
@@ -167,6 +169,7 @@ export interface Invoice {
 export interface CreateInvoiceBody {
   customerId?: number;
   date: string;
+  paymentMode?: "cash" | "credit";
   items: CreateInvoiceItem[];
   notes?: string;
   overallDiscountPercent?: number;

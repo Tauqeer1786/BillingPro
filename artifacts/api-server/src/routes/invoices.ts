@@ -12,18 +12,30 @@ import {
 
 const router: IRouter = Router();
 
+export function formatInvoiceNumber(num: number): string {
+  return String(num).padStart(3, "0");
+}
+
 async function generateInvoiceNumber(): Promise<string> {
-  const now = new Date();
-  const fy = now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1;
-  const prefix = `INV-${fy}-${fy + 1}-`;
+  let candidate: string;
+  let attempts = 0;
 
-  const [result] = await db.select({
-    count: sql<number>`count(*)`,
-  }).from(invoicesTable)
-    .where(sql`${invoicesTable.invoiceNumber} like ${prefix + '%'}`);
+  const [{ count }] = await db.select({ count: sql<number>`count(*)` }).from(invoicesTable);
+  let nextNum = Number(count) + 1;
 
-  const num = Number(result.count) + 1;
-  return `${prefix}${String(num).padStart(4, '0')}`;
+  while (true) {
+    candidate = formatInvoiceNumber(nextNum);
+    const existing = await db
+      .select({ id: invoicesTable.id })
+      .from(invoicesTable)
+      .where(eq(invoicesTable.invoiceNumber, candidate))
+      .limit(1);
+    if (existing.length === 0) break;
+    nextNum++;
+    if (++attempts > 1000) throw new Error("Could not generate unique invoice number");
+  }
+
+  return candidate;
 }
 
 router.get("/invoices", async (req, res): Promise<void> => {
@@ -54,6 +66,7 @@ router.get("/invoices", async (req, res): Promise<void> => {
       customerId: invoicesTable.customerId,
       date: invoicesTable.date,
       paymentStatus: invoicesTable.paymentStatus,
+      paymentMode: invoicesTable.paymentMode,
       grandTotal: invoicesTable.grandTotal,
       totalProfit: invoicesTable.totalProfit,
       createdAt: invoicesTable.createdAt,
@@ -98,6 +111,7 @@ router.get("/invoices", async (req, res): Promise<void> => {
       customerName: i.customerId ? customerNames[i.customerId] || "" : "",
       date: i.date,
       paymentStatus: i.paymentStatus,
+      paymentMode: i.paymentMode,
       grandTotal: i.grandTotal,
       outstandingAmount: i.paymentStatus === "unpaid" ? i.grandTotal : 0,
       totalProfit: i.totalProfit,
@@ -118,7 +132,7 @@ router.post("/invoices", async (req, res): Promise<void> => {
     return;
   }
 
-  const { customerId, date, items, notes, overallDiscountPercent = 0 } = parsed.data;
+  const { customerId, date, items, notes, overallDiscountPercent = 0, paymentMode = "credit" } = parsed.data;
 
   const productIds = items.map(i => i.productId);
   const products = await db.select().from(productsTable)
@@ -181,6 +195,7 @@ router.post("/invoices", async (req, res): Promise<void> => {
     invoiceNumber,
     customerId: customerId || null,
     date,
+    paymentMode: paymentMode as "cash" | "credit",
     subtotal: Math.round(subtotal * 100) / 100,
     totalGst: Math.round(totalGst * 100) / 100,
     totalDiscount: Math.round(totalDiscount * 100) / 100,
@@ -215,6 +230,7 @@ router.post("/invoices", async (req, res): Promise<void> => {
     customerName,
     date: invoice.date,
     paymentStatus: invoice.paymentStatus,
+    paymentMode: invoice.paymentMode,
     items: insertedItems.map(i => ({
       id: i.id,
       productId: i.productId,
@@ -268,6 +284,7 @@ router.get("/invoices/:id", async (req, res): Promise<void> => {
     customerName,
     date: invoice.date,
     paymentStatus: invoice.paymentStatus,
+    paymentMode: invoice.paymentMode,
     items: items.map(i => ({
       id: i.id,
       productId: i.productId,

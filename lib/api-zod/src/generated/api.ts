@@ -302,6 +302,7 @@ export const createInvoiceBodyOverallDiscountPercentDefault = 0;
 export const CreateInvoiceBody = zod.object({
   customerId: zod.number().optional(),
   date: zod.string(),
+  paymentMode: zod.enum(["cash", "credit"]).optional().default("credit"),
   items: zod.array(
     zod.object({
       productId: zod.number(),
@@ -332,6 +333,7 @@ export const GetInvoiceResponse = zod.object({
   customerName: zod.string().optional(),
   date: zod.string(),
   paymentStatus: zod.enum(["paid", "unpaid"]),
+  paymentMode: zod.enum(["cash", "credit"]).optional(),
   items: zod.array(
     zod.object({
       id: zod.number().optional(),
