@@ -1,4 +1,5 @@
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useListProducts, useListCustomers, useCreateInvoice, getListInvoicesQueryKey, getGetDashboardSummaryQueryKey, getGetRecentTransactionsQueryKey, type Product } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -42,6 +43,8 @@ function ProductAutocomplete({
 }) {
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
+  const containerRef = useRef<HTMLDivElement>(null);
   const query = value.trim().toLowerCase();
   const canShowSuggestions = query.length >= 2;
   const selectedProduct = products.find((product) => product.id === selectedProductId);
@@ -53,6 +56,19 @@ function ProductAutocomplete({
     })
     .slice(0, 8);
 
+  useEffect(() => {
+    if (open && canShowSuggestions && containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      setDropdownStyle({
+        position: "fixed",
+        top: rect.bottom + 4,
+        left: rect.left,
+        width: rect.width,
+        zIndex: 9999,
+      });
+    }
+  }, [open, canShowSuggestions, value]);
+
   function selectProduct(product: Product) {
     onSelect(product);
     setOpen(false);
@@ -60,7 +76,7 @@ function ProductAutocomplete({
   }
 
   return (
-    <div className="relative min-w-[260px]">
+    <div ref={containerRef} className="min-w-[260px]">
       <Input
         ref={inputRef}
         value={value}
@@ -107,8 +123,8 @@ function ProductAutocomplete({
           <span>Select a product to view available stock</span>
         )}
       </div>
-      {open && canShowSuggestions && (
-        <div className="absolute z-50 mt-1 w-full overflow-hidden rounded-md border bg-popover shadow-md">
+      {open && canShowSuggestions && createPortal(
+        <div style={dropdownStyle} className="overflow-hidden rounded-md border bg-popover shadow-md">
           {suggestions.length === 0 ? (
             <div className="px-3 py-2 text-sm text-muted-foreground">No products found</div>
           ) : (
@@ -125,7 +141,8 @@ function ProductAutocomplete({
               </button>
             ))
           )}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
