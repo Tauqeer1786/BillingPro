@@ -152,6 +152,10 @@ export interface Invoice {
   invoiceNumber: string;
   customerId?: number;
   customerName?: string;
+  customerPhone?: string | null;
+  customerEmail?: string | null;
+  customerAddress?: string | null;
+  customerGstin?: string | null;
   date: string;
   paymentStatus: InvoicePaymentStatus;
   paymentMode?: "cash" | "credit";

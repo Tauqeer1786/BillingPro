@@ -212,7 +212,15 @@ export function InvoiceDetail({ id }: { id: number }) {
     line(y);
     y += isA5 ? 5 : 7;
 
-    const boxHeight = isA5 ? 17 : 22;
+    const customerLines = [
+      invoice.customerPhone ? `Ph: ${invoice.customerPhone}` : "",
+      invoice.customerAddress || "",
+      invoice.customerGstin ? `GSTIN: ${invoice.customerGstin}` : "",
+      invoice.customerEmail || "",
+    ].filter(Boolean);
+    const extraCustomerLines = customerLines.length;
+    const lineH = isA5 ? 3.5 : 4;
+    const boxHeight = isA5 ? Math.max(17, 13 + extraCustomerLines * lineH) : Math.max(22, 15 + extraCustomerLines * lineH);
     doc.setDrawColor(224, 224, 224);
     doc.roundedRect(margin, y, contentWidth / 2 - 3, boxHeight, 1.5, 1.5);
     doc.roundedRect(margin + contentWidth / 2 + 3, y, contentWidth / 2 - 3, boxHeight, 1.5, 1.5);
@@ -223,13 +231,20 @@ export function InvoiceDetail({ id }: { id: number }) {
     doc.text("INVOICE DETAILS", margin + contentWidth / 2 + 6, y + 5);
     doc.setFontSize(isA5 ? 7 : 9);
     doc.setTextColor(17, 17, 17);
+    doc.setFont("helvetica", "bold");
     doc.text(safe(invoice.customerName || "Walk-in Customer"), margin + 3, y + (isA5 ? 11 : 13));
     doc.setFont("helvetica", "normal");
     doc.setFontSize(isA5 ? 6 : 8);
+    let custY = y + (isA5 ? 14.5 : 17);
+    customerLines.forEach((line) => {
+      doc.text(safe(line), margin + 3, custY);
+      custY += lineH;
+    });
     const detailsX = margin + contentWidth / 2 + 6;
     doc.text(`Invoice #: ${safe(invoice.invoiceNumber)}`, detailsX, y + (isA5 ? 10 : 12));
     doc.text(`Date: ${formatDate(invoice.date)}`, detailsX, y + (isA5 ? 13.5 : 16));
     doc.text(`Status: ${invoice.paymentStatus === "paid" ? "Paid" : "Due / Unpaid"}`, detailsX, y + (isA5 ? 17 : 20));
+    if (invoice.paymentMode) doc.text(`Mode: ${invoice.paymentMode.charAt(0).toUpperCase() + invoice.paymentMode.slice(1)}`, detailsX, y + (isA5 ? 20.5 : 24));
     y += boxHeight + (isA5 ? 5 : 7);
 
     const tableFont = isA5 ? 5.5 : 7;
@@ -481,6 +496,10 @@ export function InvoiceDetail({ id }: { id: number }) {
             <div style={{ background: "#f8f8f8", border: "1px solid #e0e0e0", borderRadius: "5px", padding: compact.boxPadding }}>
               <div style={{ fontSize: compact.label, fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: "0.6px", color: "#888", marginBottom: "4px" }}>Bill To</div>
               <div style={{ fontWeight: 700, fontSize: compact.strongText, color: "#111" }}>{invoice.customerName || "Walk-in Customer"}</div>
+              {invoice.customerPhone && <div style={{ fontSize: compact.bodyText, color: "#444", marginTop: "2px" }}>Ph: {invoice.customerPhone}</div>}
+              {invoice.customerAddress && <div style={{ fontSize: compact.bodyText, color: "#444", marginTop: "2px" }}>{invoice.customerAddress}</div>}
+              {invoice.customerGstin && <div style={{ fontSize: compact.bodyText, color: "#444", marginTop: "2px" }}>GSTIN: {invoice.customerGstin}</div>}
+              {invoice.customerEmail && <div style={{ fontSize: compact.bodyText, color: "#444", marginTop: "2px" }}>{invoice.customerEmail}</div>}
             </div>
             <div style={{ background: "#f8f8f8", border: "1px solid #e0e0e0", borderRadius: "5px", padding: compact.boxPadding }}>
               <div style={{ fontSize: compact.label, fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: "0.6px", color: "#888", marginBottom: "4px" }}>Invoice Details</div>

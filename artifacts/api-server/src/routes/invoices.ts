@@ -272,9 +272,19 @@ router.get("/invoices/:id", async (req, res): Promise<void> => {
   const items = await db.select().from(invoiceItemsTable).where(eq(invoiceItemsTable.invoiceId, invoice.id));
 
   let customerName = "";
+  let customerPhone: string | null = null;
+  let customerEmail: string | null = null;
+  let customerAddress: string | null = null;
+  let customerGstin: string | null = null;
   if (invoice.customerId) {
     const [customer] = await db.select().from(customersTable).where(eq(customersTable.id, invoice.customerId));
-    if (customer) customerName = customer.name;
+    if (customer) {
+      customerName = customer.name;
+      customerPhone = customer.phone || null;
+      customerEmail = customer.email || null;
+      customerAddress = customer.address || null;
+      customerGstin = customer.gstin || null;
+    }
   }
 
   res.json({
@@ -282,6 +292,10 @@ router.get("/invoices/:id", async (req, res): Promise<void> => {
     invoiceNumber: invoice.invoiceNumber,
     customerId: invoice.customerId,
     customerName,
+    customerPhone,
+    customerEmail,
+    customerAddress,
+    customerGstin,
     date: invoice.date,
     paymentStatus: invoice.paymentStatus,
     paymentMode: invoice.paymentMode,
