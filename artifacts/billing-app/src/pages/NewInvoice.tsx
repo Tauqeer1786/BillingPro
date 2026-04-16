@@ -368,14 +368,14 @@ export function NewInvoice() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[30%]">Product</TableHead>
-                <TableHead className="text-right">Qty</TableHead>
-                <TableHead className="text-right">Unit Price</TableHead>
-                <TableHead className="text-right">Disc %</TableHead>
-                <TableHead className="text-right">GST %</TableHead>
-                <TableHead className="text-right">GST Amt</TableHead>
-                <TableHead className="text-right">Total</TableHead>
-                <TableHead></TableHead>
+                <TableHead>Product</TableHead>
+                <TableHead className="w-20 text-right">Qty</TableHead>
+                <TableHead className="w-28 text-right">Unit Price</TableHead>
+                <TableHead className="w-20 text-right">Disc %</TableHead>
+                <TableHead className="w-16 text-right">GST %</TableHead>
+                <TableHead className="w-28 text-right">GST Amt</TableHead>
+                <TableHead className="w-28 text-right">Total</TableHead>
+                <TableHead className="w-10"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -408,19 +408,19 @@ export function NewInvoice() {
                           }}
                         />
                       </TableCell>
-                      <TableCell>
-                        <Input type="number" min="1" value={item.quantity} onKeyDown={(e) => handleRowEnter(e, index)} onChange={(e) => updateItem(index, "quantity", e.target.value)} className="w-16 h-8 text-right" />
+                      <TableCell className="w-20">
+                        <Input type="number" min="1" value={item.quantity} onKeyDown={(e) => handleRowEnter(e, index)} onChange={(e) => updateItem(index, "quantity", e.target.value)} className="w-full h-8 text-right" />
                       </TableCell>
-                      <TableCell>
-                        <Input type="number" step="0.01" value={item.unitPrice} onKeyDown={(e) => handleRowEnter(e, index)} onChange={(e) => updateItem(index, "unitPrice", e.target.value)} className="w-24 h-8 text-right" />
+                      <TableCell className="w-28">
+                        <Input type="number" step="0.01" value={item.unitPrice} onKeyDown={(e) => handleRowEnter(e, index)} onChange={(e) => updateItem(index, "unitPrice", e.target.value)} className="w-full h-8 text-right" />
                       </TableCell>
-                      <TableCell>
-                        <Input type="number" step="0.01" value={item.discountPercent} onKeyDown={(e) => handleRowEnter(e, index)} onChange={(e) => updateItem(index, "discountPercent", e.target.value)} className="w-16 h-8 text-right" />
+                      <TableCell className="w-20">
+                        <Input type="number" step="0.01" value={item.discountPercent} onKeyDown={(e) => handleRowEnter(e, index)} onChange={(e) => updateItem(index, "discountPercent", e.target.value)} className="w-full h-8 text-right" />
                       </TableCell>
-                      <TableCell className="text-right text-sm">{item.gstPercent}%</TableCell>
-                      <TableCell className="text-right text-sm">{formatCurrency(gstAmount)}</TableCell>
-                      <TableCell className="text-right font-semibold">{formatCurrency(lineTotal)}</TableCell>
-                      <TableCell>
+                      <TableCell className="w-16 text-right text-sm">{item.gstPercent}%</TableCell>
+                      <TableCell className="w-28 text-right text-sm">{formatCurrency(gstAmount)}</TableCell>
+                      <TableCell className="w-28 text-right font-semibold">{formatCurrency(lineTotal)}</TableCell>
+                      <TableCell className="w-10">
                         <Button variant="ghost" size="sm" onClick={() => removeItem(index)} className="text-destructive h-8 w-8 p-0"><Trash2 className="w-4 h-4" /></Button>
                       </TableCell>
                     </TableRow>
