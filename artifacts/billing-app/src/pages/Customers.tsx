@@ -9,7 +9,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil, Trash2, Search, Eye, X } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, Eye, X, ExternalLink } from "lucide-react";
+import { Link } from "wouter";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface CustomerForm {
@@ -125,6 +126,7 @@ export function Customers() {
                     <TableHead>Invoice #</TableHead>
                     <TableHead>Date</TableHead>
                     <TableHead className="text-right">Amount</TableHead>
+                    <TableHead className="w-16"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -133,6 +135,13 @@ export function Customers() {
                       <TableCell className="font-mono text-sm">{inv.invoiceNumber}</TableCell>
                       <TableCell>{formatDate(inv.date)}</TableCell>
                       <TableCell className="text-right font-semibold">{formatCurrency(inv.grandTotal)}</TableCell>
+                      <TableCell>
+                        <Link href={`/invoices/${inv.id}`}>
+                          <Button variant="ghost" size="sm" title="View Invoice">
+                            <ExternalLink className="w-4 h-4" />
+                          </Button>
+                        </Link>
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

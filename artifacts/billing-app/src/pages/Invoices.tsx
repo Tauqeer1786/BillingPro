@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { customFetch, useListInvoices } from "@workspace/api-client-react";
+import { customFetch, useListInvoices, useDeleteInvoice, getListInvoicesQueryKey } from "@workspace/api-client-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,15 +8,17 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatCurrency, formatDate } from "@/lib/format";
-import { Plus, Eye } from "lucide-react";
+import { Plus, Eye, Trash2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "wouter";
+import { useToast } from "@/hooks/use-toast";
 
 export function Invoices() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [status, setStatus] = useState<"all" | "paid" | "unpaid">("all");
   const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   const { data, isLoading } = useListInvoices({
     startDate: startDate || undefined,
@@ -35,6 +37,23 @@ export function Invoices() {
       queryClient.invalidateQueries();
     },
   });
+
+  const deleteInvoice = useDeleteInvoice({
+    mutation: {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getListInvoicesQueryKey() });
+        toast({ title: "Invoice deleted" });
+      },
+      onError: () => {
+        toast({ title: "Error", description: "Failed to delete invoice", variant: "destructive" });
+      },
+    },
+  });
+
+  function handleDelete(id: number, invoiceNumber: string) {
+    if (!confirm(`Delete invoice ${invoiceNumber}? This cannot be undone.`)) return;
+    deleteInvoice.mutate({ id });
+  }
 
   const filteredTotal = data?.invoices.reduce((sum, invoice) => sum + invoice.grandTotal, 0) ?? 0;
 
@@ -142,18 +161,29 @@ export function Invoices() {
                     <TableCell className="text-right">{inv.itemCount}</TableCell>
                     <TableCell className="text-right font-semibold">{formatCurrency(inv.grandTotal)}</TableCell>
                     <TableCell className="text-right font-semibold text-orange-600">{formatCurrency(inv.outstandingAmount)}</TableCell>
-                    <TableCell className="text-right space-x-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={updateStatus.isPending}
-                        onClick={() => updateStatus.mutate({ id: inv.id, paymentStatus: inv.paymentStatus === "paid" ? "unpaid" : "paid" })}
-                      >
-                        Mark {inv.paymentStatus === "paid" ? "Unpaid" : "Paid"}
-                      </Button>
-                      <Link href={`/invoices/${inv.id}`}>
-                        <Button variant="ghost" size="sm"><Eye className="w-4 h-4" /></Button>
-                      </Link>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={updateStatus.isPending}
+                          onClick={() => updateStatus.mutate({ id: inv.id, paymentStatus: inv.paymentStatus === "paid" ? "unpaid" : "paid" })}
+                        >
+                          Mark {inv.paymentStatus === "paid" ? "Unpaid" : "Paid"}
+                        </Button>
+                        <Link href={`/invoices/${inv.id}`}>
+                          <Button variant="ghost" size="sm"><Eye className="w-4 h-4" /></Button>
+                        </Link>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive hover:text-destructive"
+                          disabled={deleteInvoice.isPending}
+                          onClick={() => handleDelete(inv.id, inv.invoiceNumber)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))

@@ -1,19 +1,22 @@
-import { customFetch, useGetInvoice, getGetInvoiceQueryKey } from "@workspace/api-client-react";
+import { customFetch, useGetInvoice, getGetInvoiceQueryKey, useDeleteInvoice, getListInvoicesQueryKey } from "@workspace/api-client-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatCurrency, formatDate } from "@/lib/format";
-import { ArrowLeft, Download, Printer } from "lucide-react";
-import { Link } from "wouter";
+import { ArrowLeft, Download, Printer, Trash2 } from "lucide-react";
+import { Link, useLocation } from "wouter";
 import { useBusinessProfile } from "@/hooks/use-business-profile";
 import { useRef } from "react";
 import { jsPDF } from "jspdf";
+import { useToast } from "@/hooks/use-toast";
 
 export function InvoiceDetail({ id }: { id: number }) {
   const { data: invoice, isLoading } = useGetInvoice(id, { query: { enabled: !!id, queryKey: getGetInvoiceQueryKey(id) } });
   const { profile } = useBusinessProfile();
   const printRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
+  const [, setLocation] = useLocation();
+  const { toast } = useToast();
 
   const updateStatus = useMutation({
     mutationFn: (paymentStatus: "paid" | "unpaid") =>
@@ -26,6 +29,24 @@ export function InvoiceDetail({ id }: { id: number }) {
       queryClient.invalidateQueries();
     },
   });
+
+  const deleteInvoice = useDeleteInvoice({
+    mutation: {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getListInvoicesQueryKey() });
+        toast({ title: "Invoice deleted" });
+        setLocation("/invoices");
+      },
+      onError: () => {
+        toast({ title: "Error", description: "Failed to delete invoice", variant: "destructive" });
+      },
+    },
+  });
+
+  function handleDelete() {
+    if (!confirm(`Delete invoice ${invoice?.invoiceNumber}? This cannot be undone.`)) return;
+    deleteInvoice.mutate({ id });
+  }
 
   if (isLoading) {
     return (
@@ -422,6 +443,13 @@ export function InvoiceDetail({ id }: { id: number }) {
           </Button>
           <Button onClick={handleDownloadPdf}>
             <Download className="w-4 h-4 mr-2" />Download PDF
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={handleDelete}
+            disabled={deleteInvoice.isPending}
+          >
+            <Trash2 className="w-4 h-4 mr-2" />Delete
           </Button>
         </div>
       </div>
