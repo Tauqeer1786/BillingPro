@@ -1,5 +1,5 @@
-import { useState, useMemo } from "react";
-import { useListProducts, useListCustomers, useCreateInvoice, getListInvoicesQueryKey, getGetDashboardSummaryQueryKey, getGetRecentTransactionsQueryKey } from "@workspace/api-client-react";
+import { useState, useMemo, useRef } from "react";
+import { useListProducts, useListCustomers, useCreateInvoice, getListInvoicesQueryKey, getGetDashboardSummaryQueryKey, getGetRecentTransactionsQueryKey, type Product } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,112 @@ interface InvoiceLineItem {
   discountPercent: number;
 }
 
+function ProductAutocomplete({
+  products,
+  value,
+  selectedProductId,
+  onInputChange,
+  onSelect,
+  onRequestNextRow,
+  inputRef,
+}: {
+  products: Product[];
+  value: string;
+  selectedProductId: number;
+  onInputChange: (value: string) => void;
+  onSelect: (product: Product) => void;
+  onRequestNextRow: () => void;
+  inputRef: (node: HTMLInputElement | null) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const query = value.trim().toLowerCase();
+  const selectedProduct = products.find((product) => product.id === selectedProductId);
+  const suggestions = products
+    .filter((product) => {
+      if (!query) return true;
+      const name = product.name.toLowerCase();
+      return name.startsWith(query) || name.includes(query);
+    })
+    .slice(0, 8);
+
+  function selectProduct(product: Product) {
+    onSelect(product);
+    setOpen(false);
+    setActiveIndex(0);
+  }
+
+  return (
+    <div className="relative min-w-[260px]">
+      <Input
+        ref={inputRef}
+        value={value}
+        placeholder="Type product name..."
+        autoComplete="off"
+        className="h-8"
+        onFocus={() => setOpen(true)}
+        onBlur={() => setTimeout(() => setOpen(false), 120)}
+        onChange={(event) => {
+          onInputChange(event.target.value);
+          setOpen(true);
+          setActiveIndex(0);
+        }}
+        onKeyDown={(event) => {
+          if (event.key === "ArrowDown") {
+            event.preventDefault();
+            setOpen(true);
+            setActiveIndex((current) => Math.min(current + 1, Math.max(suggestions.length - 1, 0)));
+            return;
+          }
+          if (event.key === "ArrowUp") {
+            event.preventDefault();
+            setActiveIndex((current) => Math.max(current - 1, 0));
+            return;
+          }
+          if (event.key === "Enter") {
+            event.preventDefault();
+            if (open && suggestions[activeIndex]) {
+              selectProduct(suggestions[activeIndex]);
+              return;
+            }
+            onRequestNextRow();
+          }
+          if (event.key === "Escape") {
+            setOpen(false);
+          }
+        }}
+      />
+      <div className="mt-1 text-[11px] text-muted-foreground">
+        {selectedProduct ? (
+          <span>Available stock: <span className="font-semibold text-foreground">{selectedProduct.stock}</span> {selectedProduct.unit || "pcs"}</span>
+        ) : (
+          <span>Select a product to view available stock</span>
+        )}
+      </div>
+      {open && (
+        <div className="absolute z-50 mt-1 w-full overflow-hidden rounded-md border bg-popover shadow-md">
+          {suggestions.length === 0 ? (
+            <div className="px-3 py-2 text-sm text-muted-foreground">No products found</div>
+          ) : (
+            suggestions.map((product, index) => (
+              <button
+                key={product.id}
+                type="button"
+                className={`flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm hover:bg-accent hover:text-accent-foreground ${index === activeIndex ? "bg-accent text-accent-foreground" : ""}`}
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => selectProduct(product)}
+              >
+                <span className="truncate font-medium">{product.name}</span>
+                <span className="shrink-0 text-xs text-muted-foreground">Stock: {product.stock} {product.unit || "pcs"}</span>
+              </button>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function NewInvoice() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -33,6 +139,7 @@ export function NewInvoice() {
   const [notes, setNotes] = useState("");
   const [items, setItems] = useState<InvoiceLineItem[]>([]);
   const [overallDiscount, setOverallDiscount] = useState("0");
+  const productInputRefs = useRef<Array<HTMLInputElement | null>>([]);
 
   const { data: productsData } = useListProducts({ limit: 500 });
   const { data: customersData } = useListCustomers({ limit: 500 });
@@ -41,18 +148,29 @@ export function NewInvoice() {
   const products = productsData?.products || [];
   const customers = customersData?.customers || [];
 
-  function addItem() {
-    if (products.length === 0) return;
-    const p = products[0];
-    setItems([...items, {
-      productId: p.id,
-      productName: p.name,
+  function createEmptyItem(): InvoiceLineItem {
+    return {
+      productId: 0,
+      productName: "",
       quantity: 1,
-      unitPrice: p.sellingPrice,
-      costPrice: p.costPrice,
-      gstPercent: p.gstPercent,
+      unitPrice: 0,
+      costPrice: 0,
+      gstPercent: 0,
       discountPercent: 0,
-    }]);
+    };
+  }
+
+  function focusProductInput(index: number) {
+    setTimeout(() => productInputRefs.current[index]?.focus(), 0);
+  }
+
+  function addItem(afterIndex?: number) {
+    if (products.length === 0) return;
+    const insertAt = typeof afterIndex === "number" ? afterIndex + 1 : items.length;
+    const updated = [...items];
+    updated.splice(insertAt, 0, createEmptyItem());
+    setItems(updated);
+    focusProductInput(insertAt);
   }
 
   function updateItem(index: number, field: string, value: string | number) {
@@ -69,10 +187,38 @@ export function NewInvoice() {
           gstPercent: p.gstPercent,
         };
       }
+    } else if (field === "productName") {
+      updated[index] = {
+        ...updated[index],
+        productId: 0,
+        productName: String(value),
+        unitPrice: 0,
+        costPrice: 0,
+        gstPercent: 0,
+      };
     } else {
       (updated[index] as Record<string, unknown>)[field] = typeof value === "string" ? parseFloat(value) || 0 : value;
     }
     setItems(updated);
+  }
+
+  function selectProduct(index: number, product: Product) {
+    const updated = [...items];
+    updated[index] = {
+      ...updated[index],
+      productId: product.id,
+      productName: product.name,
+      unitPrice: product.sellingPrice,
+      costPrice: product.costPrice,
+      gstPercent: product.gstPercent,
+    };
+    setItems(updated);
+  }
+
+  function handleRowEnter(event: React.KeyboardEvent<HTMLInputElement>, index: number) {
+    if (event.key !== "Enter") return;
+    event.preventDefault();
+    addItem(index);
   }
 
   function removeItem(index: number) {
@@ -109,6 +255,10 @@ export function NewInvoice() {
   async function handleSubmit() {
     if (items.length === 0) {
       toast({ title: "Error", description: "Add at least one item", variant: "destructive" });
+      return;
+    }
+    if (items.some((item) => !item.productId)) {
+      toast({ title: "Error", description: "Select a product for every item row", variant: "destructive" });
       return;
     }
 
@@ -213,25 +363,26 @@ export function NewInvoice() {
                   return (
                     <TableRow key={index}>
                       <TableCell>
-                        <Select value={String(item.productId)} onValueChange={(v) => updateItem(index, "productId", v)}>
-                          <SelectTrigger className="h-8">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {products.map((p) => (
-                              <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <ProductAutocomplete
+                          products={products}
+                          value={item.productName}
+                          selectedProductId={item.productId}
+                          onInputChange={(value) => updateItem(index, "productName", value)}
+                          onSelect={(product) => selectProduct(index, product)}
+                          onRequestNextRow={() => addItem(index)}
+                          inputRef={(node) => {
+                            productInputRefs.current[index] = node;
+                          }}
+                        />
                       </TableCell>
                       <TableCell>
-                        <Input type="number" min="1" value={item.quantity} onChange={(e) => updateItem(index, "quantity", e.target.value)} className="w-16 h-8 text-right" />
+                        <Input type="number" min="1" value={item.quantity} onKeyDown={(e) => handleRowEnter(e, index)} onChange={(e) => updateItem(index, "quantity", e.target.value)} className="w-16 h-8 text-right" />
                       </TableCell>
                       <TableCell>
-                        <Input type="number" step="0.01" value={item.unitPrice} onChange={(e) => updateItem(index, "unitPrice", e.target.value)} className="w-24 h-8 text-right" />
+                        <Input type="number" step="0.01" value={item.unitPrice} onKeyDown={(e) => handleRowEnter(e, index)} onChange={(e) => updateItem(index, "unitPrice", e.target.value)} className="w-24 h-8 text-right" />
                       </TableCell>
                       <TableCell>
-                        <Input type="number" step="0.01" value={item.discountPercent} onChange={(e) => updateItem(index, "discountPercent", e.target.value)} className="w-16 h-8 text-right" />
+                        <Input type="number" step="0.01" value={item.discountPercent} onKeyDown={(e) => handleRowEnter(e, index)} onChange={(e) => updateItem(index, "discountPercent", e.target.value)} className="w-16 h-8 text-right" />
                       </TableCell>
                       <TableCell className="text-right text-sm">{item.gstPercent}%</TableCell>
                       <TableCell className="text-right text-sm">{formatCurrency(gstAmount)}</TableCell>
