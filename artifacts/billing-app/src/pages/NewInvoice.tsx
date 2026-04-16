@@ -43,10 +43,11 @@ function ProductAutocomplete({
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const query = value.trim().toLowerCase();
+  const canShowSuggestions = query.length >= 2;
   const selectedProduct = products.find((product) => product.id === selectedProductId);
   const suggestions = products
     .filter((product) => {
-      if (!query) return true;
+      if (!canShowSuggestions) return false;
       const name = product.name.toLowerCase();
       return name.startsWith(query) || name.includes(query);
     })
@@ -66,17 +67,18 @@ function ProductAutocomplete({
         placeholder="Type product name..."
         autoComplete="off"
         className="h-8"
-        onFocus={() => setOpen(true)}
+        onFocus={() => setOpen(canShowSuggestions)}
         onBlur={() => setTimeout(() => setOpen(false), 120)}
         onChange={(event) => {
-          onInputChange(event.target.value);
-          setOpen(true);
+          const nextValue = event.target.value;
+          onInputChange(nextValue);
+          setOpen(nextValue.trim().length >= 2);
           setActiveIndex(0);
         }}
         onKeyDown={(event) => {
           if (event.key === "ArrowDown") {
             event.preventDefault();
-            setOpen(true);
+            setOpen(canShowSuggestions);
             setActiveIndex((current) => Math.min(current + 1, Math.max(suggestions.length - 1, 0)));
             return;
           }
@@ -105,7 +107,7 @@ function ProductAutocomplete({
           <span>Select a product to view available stock</span>
         )}
       </div>
-      {open && (
+      {open && canShowSuggestions && (
         <div className="absolute z-50 mt-1 w-full overflow-hidden rounded-md border bg-popover shadow-md">
           {suggestions.length === 0 ? (
             <div className="px-3 py-2 text-sm text-muted-foreground">No products found</div>
