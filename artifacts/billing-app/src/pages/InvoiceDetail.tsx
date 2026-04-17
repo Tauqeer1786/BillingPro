@@ -132,9 +132,10 @@ export function InvoiceDetail({ id }: { id: number }) {
             .footer-terms { font-size: ${isA5 ? "6px" : "8px"}; color: #888; max-width: 400px; line-height: 1.3; }
             .footer-sign { text-align: right; font-size: ${isA5 ? "7px" : "9px"}; color: #444; }
             .footer-sign .sign-line { border-top: 1px solid #999; margin-top: ${isA5 ? "18px" : "24px"} !important; padding-top: ${isA5 ? "3px" : "4px"} !important; font-size: ${isA5 ? "6px" : "8px"}; color: #888; }
-            @page { size: ${profile.printPageSize}; margin: ${isA5 ? "5mm" : "8mm"}; }
+            @page { size: ${profile.printPageSize}; margin: 0; }
             @media print {
-              body { background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+              html, body { background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; margin: 0; padding: 0; }
+              body { padding: ${isA5 ? "6mm" : "9mm"} !important; }
               .invoice-print-body { width: auto; min-height: auto; margin: 0; padding: 0 !important; }
               .invoice-print-body * { max-height: none; }
               .invoice-print-body > div:first-child { padding-bottom: ${isA5 ? "8px" : "10px"} !important; margin-bottom: ${isA5 ? "8px" : "10px"} !important; border-bottom-width: 2px !important; }
