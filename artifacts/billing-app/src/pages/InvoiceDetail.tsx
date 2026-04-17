@@ -289,6 +289,9 @@ export function InvoiceDetail({ id }: { id: number }) {
     doc.setFont("helvetica", "normal");
     doc.setFontSize(fs);
     doc.text("Rs.In Word: " + numberToWords(invoice.grandTotal), innerL, y + 2);
+    doc.setFont("helvetica", "bold");
+    doc.text("Total Qty: " + String(totalQty), innerL + innerW, y + 2, { align: "right" });
+    doc.setFont("helvetica", "normal");
     y += lineH + 2;
     doc.setDrawColor(187, 187, 187);
     doc.setLineWidth(0.2);
@@ -536,7 +539,7 @@ export function InvoiceDetail({ id }: { id: number }) {
             {/* ── AMOUNT IN WORDS ── */}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid #ccc", padding: "4px 0", marginTop: "4px", fontSize: fs }}>
               <div><strong>Rs.In Word:</strong> {numberToWords(invoice.grandTotal)}</div>
-              <div style={{ fontWeight: 700 }}>{totalQty}.00</div>
+              <div style={{ fontWeight: 700 }}>Total Qty: {totalQty}</div>
             </div>
 
             {/* ── BOTTOM: BANK + GST SUMMARY ── */}
