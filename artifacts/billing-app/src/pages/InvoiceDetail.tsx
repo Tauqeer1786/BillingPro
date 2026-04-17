@@ -6,9 +6,10 @@ import { formatCurrency, formatDate } from "@/lib/format";
 import { ArrowLeft, Download, Printer, Trash2 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useBusinessProfile } from "@/hooks/use-business-profile";
-import { useRef } from "react";
+import { useRef, useState, useEffect } from "react";
 import { jsPDF } from "jspdf";
 import { useToast } from "@/hooks/use-toast";
+import { Input } from "@/components/ui/input";
 
 export function InvoiceDetail({ id }: { id: number }) {
   const { data: invoice, isLoading } = useGetInvoice(id, { query: { enabled: !!id, queryKey: getGetInvoiceQueryKey(id) } });
@@ -27,6 +28,24 @@ export function InvoiceDetail({ id }: { id: number }) {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries();
+    },
+  });
+
+  const [editAmountPaid, setEditAmountPaid] = useState<string>("");
+  useEffect(() => {
+    if (invoice) setEditAmountPaid(String(invoice.amountPaid ?? 0));
+  }, [invoice?.amountPaid]);
+
+  const updateAmountPaid = useMutation({
+    mutationFn: (amountPaid: number) =>
+      customFetch(`/api/invoices/${id}/amount-paid`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amountPaid }),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries();
+      toast({ title: "Payment updated" });
     },
   });
 
@@ -471,6 +490,32 @@ export function InvoiceDetail({ id }: { id: number }) {
             <Trash2 className="w-4 h-4 mr-2" />Delete
           </Button>
         </div>
+      </div>
+
+      <div className="print:hidden flex items-center gap-3 p-3 bg-muted/40 border rounded-lg">
+        <span className="text-sm font-medium text-muted-foreground whitespace-nowrap">Amount Paid (₹)</span>
+        <Input
+          type="number"
+          min="0"
+          step="0.01"
+          max={invoice.grandTotal}
+          value={editAmountPaid}
+          onChange={(e) => setEditAmountPaid(e.target.value)}
+          className="w-36 h-8 text-right text-sm"
+        />
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={updateAmountPaid.isPending}
+          onClick={() => updateAmountPaid.mutate(parseFloat(editAmountPaid) || 0)}
+        >
+          Save
+        </Button>
+        <div className="flex-1" />
+        <span className="text-sm text-muted-foreground">Grand Total: <strong>{formatCurrency(invoice.grandTotal)}</strong></span>
+        <span className={`text-sm font-semibold ${invoice.outstandingAmount <= 0 ? "text-green-600" : "text-orange-600"}`}>
+          Outstanding: {formatCurrency(invoice.outstandingAmount)}
+        </span>
       </div>
 
       <div className="bg-white border rounded-xl shadow-sm overflow-hidden">

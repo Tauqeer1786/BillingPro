@@ -68,6 +68,7 @@ router.get("/invoices", async (req, res): Promise<void> => {
       paymentStatus: invoicesTable.paymentStatus,
       paymentMode: invoicesTable.paymentMode,
       grandTotal: invoicesTable.grandTotal,
+      amountPaid: invoicesTable.amountPaid,
       totalProfit: invoicesTable.totalProfit,
       createdAt: invoicesTable.createdAt,
     }).from(invoicesTable)
@@ -76,7 +77,7 @@ router.get("/invoices", async (req, res): Promise<void> => {
       .limit(limit)
       .offset(offset),
     db.select({ count: sql<number>`count(*)` }).from(invoicesTable).where(whereClause),
-    db.select({ total: sql<number>`coalesce(sum(${invoicesTable.grandTotal}), 0)` }).from(invoicesTable).where(outstandingWhereClause),
+    db.select({ total: sql<number>`coalesce(sum(${invoicesTable.grandTotal} - ${invoicesTable.amountPaid}), 0)` }).from(invoicesTable).where(outstandingWhereClause),
   ]);
 
   const invoiceIds = invoices.map(i => i.id);
@@ -345,8 +346,17 @@ router.patch("/invoices/:id/status", async (req, res): Promise<void> => {
     return;
   }
 
+  const current = await db.select().from(invoicesTable).where(eq(invoicesTable.id, params.data.id)).limit(1);
+  if (!current[0]) {
+    res.status(404).json({ error: "Invoice not found" });
+    return;
+  }
+
+  const newStatus = parsed.data.paymentStatus;
+  const newAmountPaid = newStatus === "paid" ? current[0].grandTotal : 0;
+
   const [invoice] = await db.update(invoicesTable)
-    .set({ paymentStatus: parsed.data.paymentStatus })
+    .set({ paymentStatus: newStatus, amountPaid: newAmountPaid })
     .where(eq(invoicesTable.id, params.data.id))
     .returning();
 
@@ -354,6 +364,40 @@ router.patch("/invoices/:id/status", async (req, res): Promise<void> => {
     res.status(404).json({ error: "Invoice not found" });
     return;
   }
+
+  res.json({
+    id: invoice.id,
+    paymentStatus: invoice.paymentStatus,
+    amountPaid: invoice.amountPaid || 0,
+    outstandingAmount: Math.max(0, invoice.grandTotal - (invoice.amountPaid || 0)),
+  });
+});
+
+router.patch("/invoices/:id/amount-paid", async (req, res): Promise<void> => {
+  const params = UpdateInvoiceStatusParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+  const { amountPaid } = req.body as { amountPaid: number };
+  if (typeof amountPaid !== "number" || amountPaid < 0) {
+    res.status(400).json({ error: "amountPaid must be a non-negative number" });
+    return;
+  }
+
+  const current = await db.select().from(invoicesTable).where(eq(invoicesTable.id, params.data.id)).limit(1);
+  if (!current[0]) {
+    res.status(404).json({ error: "Invoice not found" });
+    return;
+  }
+
+  const capped = Math.min(amountPaid, current[0].grandTotal);
+  const newStatus: "paid" | "unpaid" = capped >= current[0].grandTotal ? "paid" : "unpaid";
+
+  const [invoice] = await db.update(invoicesTable)
+    .set({ amountPaid: capped, paymentStatus: newStatus })
+    .where(eq(invoicesTable.id, params.data.id))
+    .returning();
 
   res.json({
     id: invoice.id,

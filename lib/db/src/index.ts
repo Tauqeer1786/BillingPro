@@ -80,6 +80,12 @@ export function initializeDb() {
   if (!invoiceColumns.some(column => column.name === "amount_paid")) {
     sqlite.exec("ALTER TABLE invoices ADD COLUMN amount_paid REAL NOT NULL DEFAULT 0");
   }
+
+  sqlite.exec(`
+    UPDATE invoices
+    SET amount_paid = grand_total
+    WHERE payment_status = 'paid' AND amount_paid = 0 AND grand_total > 0
+  `);
 }
 
 export * from "./schema";
