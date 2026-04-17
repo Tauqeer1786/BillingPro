@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "exportedAt": "2026-04-16T06:36:23.990Z",
+  "exportedAt": "2026-04-17T04:58:44.271Z",
   "autoBackup": true,
   "products": [
     {
@@ -22,7 +22,7 @@
       "marginPercent": 8,
       "sellingPrice": 73440,
       "gstPercent": 18,
-      "stock": -15,
+      "stock": -28,
       "hsn": "85171200",
       "unit": "pcs",
       "createdAt": "2026-04-15T00:10:42.000Z"
@@ -94,7 +94,7 @@
       "marginPercent": 25,
       "sellingPrice": 7500,
       "gstPercent": 18,
-      "stock": 17,
+      "stock": -3,
       "hsn": "85167900",
       "unit": "pcs",
       "createdAt": "2026-04-15T00:10:42.000Z"
@@ -378,6 +378,62 @@
       "totalProfit": 149460,
       "notes": null,
       "createdAt": "2026-04-16T01:20:21.000Z"
+    },
+    {
+      "id": 17,
+      "invoiceNumber": "016",
+      "customerId": null,
+      "date": "2026-04-17",
+      "paymentStatus": "paid",
+      "subtotal": 73440,
+      "totalGst": 13219.2,
+      "totalDiscount": 0,
+      "grandTotal": 86659.2,
+      "totalProfit": 5440,
+      "notes": null,
+      "createdAt": "2026-04-17T01:05:40.000Z"
+    },
+    {
+      "id": 18,
+      "invoiceNumber": "017",
+      "customerId": null,
+      "date": "2026-04-17",
+      "paymentStatus": "paid",
+      "subtotal": 73440,
+      "totalGst": 13219.2,
+      "totalDiscount": 0,
+      "grandTotal": 86659.2,
+      "totalProfit": 5440,
+      "notes": null,
+      "createdAt": "2026-04-17T01:14:52.000Z"
+    },
+    {
+      "id": 19,
+      "invoiceNumber": "018",
+      "customerId": null,
+      "date": "2026-04-17",
+      "paymentStatus": "paid",
+      "subtotal": 73440,
+      "totalGst": 13219.2,
+      "totalDiscount": 0,
+      "grandTotal": 86659.2,
+      "totalProfit": 5440,
+      "notes": null,
+      "createdAt": "2026-04-17T01:24:27.000Z"
+    },
+    {
+      "id": 20,
+      "invoiceNumber": "019",
+      "customerId": 2,
+      "date": "2026-04-17",
+      "paymentStatus": "paid",
+      "subtotal": 884400,
+      "totalGst": 159192,
+      "totalDiscount": 0,
+      "grandTotal": 1043592,
+      "totalProfit": 84400,
+      "notes": null,
+      "createdAt": "2026-04-17T02:26:15.000Z"
     }
   ],
   "invoiceItems": [
@@ -875,6 +931,81 @@
       "discountAmount": 0,
       "totalAmount": 1299888,
       "profit": 81600
+    },
+    {
+      "id": 36,
+      "invoiceId": 17,
+      "productId": 2,
+      "productName": "Apple iPhone 15 128GB",
+      "quantity": 1,
+      "unitPrice": 73440,
+      "costPrice": 68000,
+      "gstPercent": 18,
+      "gstAmount": 13219.2,
+      "discountPercent": 0,
+      "discountAmount": 0,
+      "totalAmount": 86659.2,
+      "profit": 5440
+    },
+    {
+      "id": 37,
+      "invoiceId": 18,
+      "productId": 2,
+      "productName": "Apple iPhone 15 128GB",
+      "quantity": 1,
+      "unitPrice": 73440,
+      "costPrice": 68000,
+      "gstPercent": 18,
+      "gstAmount": 13219.2,
+      "discountPercent": 0,
+      "discountAmount": 0,
+      "totalAmount": 86659.2,
+      "profit": 5440
+    },
+    {
+      "id": 38,
+      "invoiceId": 19,
+      "productId": 2,
+      "productName": "Apple iPhone 15 128GB",
+      "quantity": 1,
+      "unitPrice": 73440,
+      "costPrice": 68000,
+      "gstPercent": 18,
+      "gstAmount": 13219.2,
+      "discountPercent": 0,
+      "discountAmount": 0,
+      "totalAmount": 86659.2,
+      "profit": 5440
+    },
+    {
+      "id": 39,
+      "invoiceId": 20,
+      "productId": 2,
+      "productName": "Apple iPhone 15 128GB",
+      "quantity": 10,
+      "unitPrice": 73440,
+      "costPrice": 68000,
+      "gstPercent": 18,
+      "gstAmount": 132192,
+      "discountPercent": 0,
+      "discountAmount": 0,
+      "totalAmount": 866592,
+      "profit": 54400
+    },
+    {
+      "id": 40,
+      "invoiceId": 20,
+      "productId": 8,
+      "productName": "Philips Air Fryer 4.1L",
+      "quantity": 20,
+      "unitPrice": 7500,
+      "costPrice": 6000,
+      "gstPercent": 18,
+      "gstAmount": 27000,
+      "discountPercent": 0,
+      "discountAmount": 0,
+      "totalAmount": 177000,
+      "profit": 30000
     }
   ]
 }
