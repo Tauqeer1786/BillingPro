@@ -11,28 +11,42 @@ import {
 
 const router: IRouter = Router();
 
-function getFinancialYearDates(fy?: string): { startDate: string; endDate: string; label: string } {
-  if (fy && fy.includes("-")) {
-    const [startYear] = fy.split("-").map(Number);
+function getFinancialYearDates(fy?: string, fyStartMonth = 4): { startDate: string; endDate: string; label: string } {
+  const startMonth = Math.max(1, Math.min(12, fyStartMonth));
+  const pad = (n: number) => String(n).padStart(2, "0");
+
+  let startYear: number;
+  if (fy) {
+    startYear = parseInt(fy.split("-")[0]) || new Date().getFullYear();
+  } else {
+    const now = new Date();
+    const currentMonth = now.getMonth() + 1;
+    startYear = currentMonth >= startMonth ? now.getFullYear() : now.getFullYear() - 1;
+  }
+
+  if (startMonth === 1) {
     return {
-      startDate: `${startYear}-04-01`,
-      endDate: `${startYear + 1}-03-31`,
-      label: `${startYear}-${startYear + 1}`,
+      startDate: `${startYear}-01-01`,
+      endDate: `${startYear}-12-31`,
+      label: String(startYear),
     };
   }
-  const now = new Date();
-  const startYear = now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1;
+
+  const endMonth = startMonth - 1;
+  const endYear = startYear + 1;
+  const lastDay = new Date(endYear, endMonth, 0).getDate();
   return {
-    startDate: `${startYear}-04-01`,
-    endDate: `${startYear + 1}-03-31`,
-    label: `${startYear}-${startYear + 1}`,
+    startDate: `${startYear}-${pad(startMonth)}-01`,
+    endDate: `${endYear}-${pad(endMonth)}-${lastDay}`,
+    label: `${startYear}-${endYear}`,
   };
 }
 
 router.get("/dashboard/summary", async (req, res): Promise<void> => {
   const params = GetDashboardSummaryQueryParams.safeParse(req.query);
   const fy = params.success ? params.data.financialYear : undefined;
-  const { startDate, endDate, label } = getFinancialYearDates(fy);
+  const fyStartMonth = params.success ? (params.data.fyStartMonth ?? 4) : 4;
+  const { startDate, endDate, label } = getFinancialYearDates(fy, fyStartMonth);
 
   const fyCondition = and(
     gte(invoicesTable.date, startDate),
@@ -107,8 +121,9 @@ router.get("/dashboard/recent-transactions", async (req, res): Promise<void> => 
 router.get("/dashboard/top-products", async (req, res): Promise<void> => {
   const params = GetTopProductsQueryParams.safeParse(req.query);
   const fy = params.success ? params.data.financialYear : undefined;
+  const fyStartMonth = params.success ? (params.data.fyStartMonth ?? 4) : 4;
   const limit = params.success ? params.data.limit || 5 : 5;
-  const { startDate, endDate } = getFinancialYearDates(fy);
+  const { startDate, endDate } = getFinancialYearDates(fy, fyStartMonth);
 
   const results = await db.select({
     productId: invoiceItemsTable.productId,
@@ -138,8 +153,9 @@ router.get("/dashboard/top-products", async (req, res): Promise<void> => {
 router.get("/dashboard/top-customers", async (req, res): Promise<void> => {
   const params = GetTopCustomersQueryParams.safeParse(req.query);
   const fy = params.success ? params.data.financialYear : undefined;
+  const fyStartMonth = params.success ? (params.data.fyStartMonth ?? 4) : 4;
   const limit = params.success ? params.data.limit || 5 : 5;
-  const { startDate, endDate } = getFinancialYearDates(fy);
+  const { startDate, endDate } = getFinancialYearDates(fy, fyStartMonth);
 
   const results = await db.select({
     customerId: invoicesTable.customerId,
@@ -177,7 +193,8 @@ router.get("/dashboard/top-customers", async (req, res): Promise<void> => {
 router.get("/dashboard/monthly-sales", async (req, res): Promise<void> => {
   const params = GetMonthlySalesQueryParams.safeParse(req.query);
   const fy = params.success ? params.data.financialYear : undefined;
-  const { startDate, endDate } = getFinancialYearDates(fy);
+  const fyStartMonth = params.success ? (params.data.fyStartMonth ?? 4) : 4;
+  const { startDate, endDate } = getFinancialYearDates(fy, fyStartMonth);
 
   const months = ["January", "February", "March", "April", "May", "June",
     "July", "August", "September", "October", "November", "December"];

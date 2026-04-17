@@ -1,18 +1,50 @@
+import { useState, useMemo } from "react";
 import { useGetDashboardSummary, useGetRecentTransactions, useGetTopProducts, useGetTopCustomers, useGetMonthlySales } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { FileText, IndianRupee, Users, AlertCircle } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { Link } from "wouter";
+import { useBusinessProfile } from "@/hooks/use-business-profile";
+
+function getCurrentFyStartYear(fyStartMonth: number): number {
+  const now = new Date();
+  const currentMonth = now.getMonth() + 1;
+  return currentMonth >= fyStartMonth ? now.getFullYear() : now.getFullYear() - 1;
+}
+
+function fyLabel(startYear: number, fyStartMonth: number): string {
+  if (fyStartMonth === 1) return String(startYear);
+  return `${startYear}-${startYear + 1}`;
+}
 
 export function Dashboard() {
-  const { data: summary, isLoading } = useGetDashboardSummary();
+  const { profile } = useBusinessProfile();
+  const fyStartMonth = profile.fyStartMonth ?? 4;
+
+  const currentStartYear = useMemo(() => getCurrentFyStartYear(fyStartMonth), [fyStartMonth]);
+  const [selectedStartYear, setSelectedStartYear] = useState<number>(currentStartYear);
+
+  const fyOptions = useMemo(() => {
+    const years: number[] = [];
+    for (let i = currentStartYear - 3; i <= currentStartYear + 1; i++) {
+      years.push(i);
+    }
+    return years.reverse();
+  }, [currentStartYear]);
+
+  const financialYear = fyLabel(selectedStartYear, fyStartMonth);
+
+  const queryParams = { financialYear, fyStartMonth };
+
+  const { data: summary, isLoading } = useGetDashboardSummary(queryParams);
   const { data: recentTransactions } = useGetRecentTransactions({ limit: 5 });
-  const { data: topProducts } = useGetTopProducts({ limit: 5 });
-  const { data: topCustomers } = useGetTopCustomers({ limit: 5 });
-  const { data: monthlySales } = useGetMonthlySales();
+  const { data: topProducts } = useGetTopProducts({ ...queryParams, limit: 5 });
+  const { data: topCustomers } = useGetTopCustomers({ ...queryParams, limit: 5 });
+  const { data: monthlySales } = useGetMonthlySales(queryParams);
 
   if (isLoading) {
     return (
@@ -29,9 +61,21 @@ export function Dashboard() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-        <span className="text-sm text-muted-foreground">FY {summary?.financialYear}</span>
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-muted-foreground">Financial Year</span>
+          <Select value={String(selectedStartYear)} onValueChange={v => setSelectedStartYear(Number(v))}>
+            <SelectTrigger className="w-40">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {fyOptions.map(y => (
+                <SelectItem key={y} value={String(y)}>FY {fyLabel(y, fyStartMonth)}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -76,7 +120,7 @@ export function Dashboard() {
       {monthlySales && monthlySales.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>Monthly Sales</CardTitle>
+            <CardTitle>Monthly Sales — FY {financialYear}</CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={280}>

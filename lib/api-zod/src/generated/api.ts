@@ -400,6 +400,7 @@ export const UpdateInvoiceStatusResponse = zod.object({
  */
 export const GetDashboardSummaryQueryParams = zod.object({
   financialYear: zod.coerce.string().optional(),
+  fyStartMonth: zod.coerce.number().int().min(1).max(12).optional(),
 });
 
 export const GetDashboardSummaryResponse = zod.object({
@@ -445,6 +446,7 @@ export const getTopProductsQueryLimitDefault = 5;
 
 export const GetTopProductsQueryParams = zod.object({
   financialYear: zod.coerce.string().optional(),
+  fyStartMonth: zod.coerce.number().int().min(1).max(12).optional(),
   limit: zod.coerce.number().default(getTopProductsQueryLimitDefault),
 });
 
@@ -464,6 +466,7 @@ export const getTopCustomersQueryLimitDefault = 5;
 
 export const GetTopCustomersQueryParams = zod.object({
   financialYear: zod.coerce.string().optional(),
+  fyStartMonth: zod.coerce.number().int().min(1).max(12).optional(),
   limit: zod.coerce.number().default(getTopCustomersQueryLimitDefault),
 });
 
@@ -480,6 +483,7 @@ export const GetTopCustomersResponse = zod.array(GetTopCustomersResponseItem);
  */
 export const GetMonthlySalesQueryParams = zod.object({
   financialYear: zod.coerce.string().optional(),
+  fyStartMonth: zod.coerce.number().int().min(1).max(12).optional(),
 });
 
 export const GetMonthlySalesResponseItem = zod.object({

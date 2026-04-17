@@ -12,6 +12,7 @@ export interface BusinessProfile {
   bankIfsc: string;
   termsAndConditions: string;
   printPageSize: "A4" | "A5";
+  fyStartMonth: number;
 }
 
 const DEFAULT_PROFILE: BusinessProfile = {
@@ -26,6 +27,7 @@ const DEFAULT_PROFILE: BusinessProfile = {
   bankIfsc: "SBIN0001234",
   termsAndConditions: "Goods once sold will not be taken back. Payment due within 30 days. E & O.E.",
   printPageSize: "A4",
+  fyStartMonth: 4,
 };
 
 const STORAGE_KEY = "billing_business_profile";

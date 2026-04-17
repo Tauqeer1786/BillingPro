@@ -11,4 +11,8 @@ export type GetDashboardSummaryParams = {
    * Financial year e.g. 2025-2026
    */
   financialYear?: string;
+  /**
+   * Financial year start month (1-12, default 4 for April)
+   */
+  fyStartMonth?: number;
 };

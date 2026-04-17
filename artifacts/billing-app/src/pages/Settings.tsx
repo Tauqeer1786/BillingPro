@@ -295,6 +295,43 @@ export function Settings() {
             </div>
           </div>
 
+          <div className="border-t pt-4">
+            <div className="grid sm:grid-cols-2 gap-4 items-end">
+              <div className="space-y-1.5">
+                <Label>Financial Year Start Month</Label>
+                <Select
+                  value={String(localProfile.fyStartMonth ?? 4)}
+                  onValueChange={value => setLocalProfile(p => ({ ...p, fyStartMonth: Number(value) }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[
+                      { v: 1, label: "January (Calendar Year)" },
+                      { v: 4, label: "April (India Standard)" },
+                      { v: 7, label: "July" },
+                      { v: 10, label: "October" },
+                      { v: 2, label: "February" },
+                      { v: 3, label: "March" },
+                      { v: 5, label: "May" },
+                      { v: 6, label: "June" },
+                      { v: 8, label: "August" },
+                      { v: 9, label: "September" },
+                      { v: 11, label: "November" },
+                      { v: 12, label: "December" },
+                    ].map(m => (
+                      <SelectItem key={m.v} value={String(m.v)}>{m.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Sets which month the financial year begins. Default is April for Indian businesses.
+              </p>
+            </div>
+          </div>
+
           <Button onClick={handleProfileSave} className="w-full sm:w-auto">
             <Save className="w-4 h-4 mr-2" />
             Save Business Profile

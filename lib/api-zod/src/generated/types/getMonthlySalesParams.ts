@@ -8,4 +8,5 @@
 
 export type GetMonthlySalesParams = {
   financialYear?: string;
+  fyStartMonth?: number;
 };

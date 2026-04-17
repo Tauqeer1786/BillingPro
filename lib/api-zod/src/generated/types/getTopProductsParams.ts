@@ -8,5 +8,6 @@
 
 export type GetTopProductsParams = {
   financialYear?: string;
+  fyStartMonth?: number;
   limit?: number;
 };

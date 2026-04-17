@@ -8,5 +8,6 @@
 
 export type GetTopCustomersParams = {
   financialYear?: string;
+  fyStartMonth?: number;
   limit?: number;
 };
