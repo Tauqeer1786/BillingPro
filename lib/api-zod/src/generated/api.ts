@@ -314,6 +314,7 @@ export const CreateInvoiceBody = zod.object({
     }),
   ),
   notes: zod.string().optional(),
+  amountPaid: zod.number().optional().default(0),
   overallDiscountPercent: zod
     .number()
     .default(createInvoiceBodyOverallDiscountPercentDefault),
@@ -358,6 +359,7 @@ export const GetInvoiceResponse = zod.object({
   totalGst: zod.number(),
   totalDiscount: zod.number(),
   grandTotal: zod.number(),
+  amountPaid: zod.number().optional(),
   outstandingAmount: zod.number(),
   totalProfit: zod.number().optional(),
   notes: zod.string().optional(),

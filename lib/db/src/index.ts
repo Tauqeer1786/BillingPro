@@ -77,6 +77,9 @@ export function initializeDb() {
   if (!invoiceColumns.some(column => column.name === "payment_mode")) {
     sqlite.exec("ALTER TABLE invoices ADD COLUMN payment_mode TEXT NOT NULL DEFAULT 'credit'");
   }
+  if (!invoiceColumns.some(column => column.name === "amount_paid")) {
+    sqlite.exec("ALTER TABLE invoices ADD COLUMN amount_paid REAL NOT NULL DEFAULT 0");
+  }
 }
 
 export * from "./schema";

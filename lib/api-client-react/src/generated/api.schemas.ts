@@ -164,6 +164,7 @@ export interface Invoice {
   totalGst: number;
   totalDiscount: number;
   grandTotal: number;
+  amountPaid?: number;
   outstandingAmount: number;
   totalProfit?: number;
   notes?: string;
@@ -176,6 +177,7 @@ export interface CreateInvoiceBody {
   paymentMode?: "cash" | "credit";
   items: CreateInvoiceItem[];
   notes?: string;
+  amountPaid?: number;
   overallDiscountPercent?: number;
 }
 

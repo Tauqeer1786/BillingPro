@@ -159,6 +159,7 @@ export function NewInvoice() {
   const [notes, setNotes] = useState("");
   const [items, setItems] = useState<InvoiceLineItem[]>([]);
   const [overallDiscount, setOverallDiscount] = useState("0");
+  const [amountPaid, setAmountPaid] = useState("0");
   const productInputRefs = useRef<Array<HTMLInputElement | null>>([]);
 
   const { data: productsData } = useListProducts({ limit: 500 });
@@ -295,6 +296,7 @@ export function NewInvoice() {
             discountPercent: item.discountPercent,
           })),
           notes: notes || undefined,
+          amountPaid: parseFloat(amountPaid) || 0,
           overallDiscountPercent: parseFloat(overallDiscount) || 0,
         },
       });
@@ -456,6 +458,29 @@ export function NewInvoice() {
             <div className="border-t pt-2 flex justify-between font-bold text-lg">
               <span>Grand Total</span>
               <span>{formatCurrency(totals.grandTotal)}</span>
+            </div>
+            <div className="border-t pt-2 space-y-1">
+              <div className="flex justify-between items-center text-sm">
+                <Label className="text-muted-foreground">Amount Paid (₹)</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={amountPaid}
+                  onChange={(e) => setAmountPaid(e.target.value)}
+                  className="w-32 h-7 text-right text-sm"
+                />
+              </div>
+              {(() => {
+                const paid = Math.min(parseFloat(amountPaid) || 0, totals.grandTotal);
+                const outstanding = Math.max(0, totals.grandTotal - paid);
+                return (
+                  <div className={`flex justify-between font-semibold text-sm pt-1 ${outstanding > 0 ? "text-orange-600" : "text-green-600"}`}>
+                    <span>Outstanding Balance</span>
+                    <span>{formatCurrency(outstanding)}</span>
+                  </div>
+                );
+              })()}
             </div>
           </CardContent>
         </Card>

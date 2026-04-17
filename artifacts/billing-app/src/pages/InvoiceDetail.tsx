@@ -334,18 +334,21 @@ export function InvoiceDetail({ id }: { id: number }) {
       ["SGST", money(sgst)],
       ...(invoice.totalDiscount > 0 ? [["Discount", `-${money(invoice.totalDiscount)}`]] : []),
       ["Grand Total", money(invoice.grandTotal)],
+      ...(invoice.amountPaid && invoice.amountPaid > 0 ? [["Amount Paid", money(invoice.amountPaid)]] : []),
       ["Outstanding Due", money(invoice.outstandingAmount)],
     ];
     doc.setFontSize(isA5 ? 6 : 8);
     totalRows.forEach(([label, value], index) => {
       const isGrand = label === "Grand Total";
+      const isAmtPaid = label === "Amount Paid";
       const isDue = label === "Outstanding Due";
       if (isGrand) doc.setFillColor(26, 26, 26);
-      else if (isDue) doc.setFillColor(invoice.paymentStatus === "paid" ? 220 : 255, invoice.paymentStatus === "paid" ? 252 : 237, invoice.paymentStatus === "paid" ? 231 : 213);
+      else if (isAmtPaid) doc.setFillColor(220, 252, 231);
+      else if (isDue) doc.setFillColor(invoice.outstandingAmount <= 0 ? 220 : 255, invoice.outstandingAmount <= 0 ? 252 : 237, invoice.outstandingAmount <= 0 ? 231 : 213);
       else doc.setFillColor(255, 255, 255);
-      doc.rect(totalsX, y, totalsWidth, rowHeight, isGrand || isDue ? "F" : "S");
-      doc.setFont("helvetica", isGrand || isDue ? "bold" : "normal");
-      doc.setTextColor(isGrand ? 255 : 17, isGrand ? 255 : 17, isGrand ? 255 : 17);
+      doc.rect(totalsX, y, totalsWidth, rowHeight, (isGrand || isDue || isAmtPaid) ? "F" : "S");
+      doc.setFont("helvetica", (isGrand || isDue || isAmtPaid) ? "bold" : "normal");
+      doc.setTextColor(isGrand ? 255 : isAmtPaid ? 22 : 17, isGrand ? 255 : isAmtPaid ? 101 : 17, isGrand ? 255 : isAmtPaid ? 52 : 17);
       doc.text(label, totalsX + 2, y + rowHeight - 1.7);
       doc.text(value, totalsX + totalsWidth - 2, y + rowHeight - 1.7, { align: "right" });
       doc.setTextColor(17, 17, 17);
@@ -561,7 +564,13 @@ export function InvoiceDetail({ id }: { id: number }) {
                 <span style={{ color: "#ccc" }}>Grand Total</span>
                 <span>{formatCurrency(invoice.grandTotal)}</span>
               </div>
-              <div style={{ display: "flex", justifyContent: "space-between", padding: isA5 ? "4px 7px" : "5px 8px", background: invoice.paymentStatus === "paid" ? "#dcfce7" : "#ffedd5", color: invoice.paymentStatus === "paid" ? "#166534" : "#9a3412", fontWeight: 700, fontSize: isA5 ? "8px" : "10px" }}>
+              {(invoice.amountPaid !== undefined && invoice.amountPaid > 0) && (
+                <div style={{ display: "flex", justifyContent: "space-between", padding: isA5 ? "4px 7px" : "5px 8px", background: "#dcfce7", color: "#166534", fontWeight: 700, fontSize: isA5 ? "8px" : "10px" }}>
+                  <span>Amount Paid</span>
+                  <span>{formatCurrency(invoice.amountPaid)}</span>
+                </div>
+              )}
+              <div style={{ display: "flex", justifyContent: "space-between", padding: isA5 ? "4px 7px" : "5px 8px", background: invoice.outstandingAmount <= 0 ? "#dcfce7" : "#ffedd5", color: invoice.outstandingAmount <= 0 ? "#166534" : "#9a3412", fontWeight: 700, fontSize: isA5 ? "8px" : "10px" }}>
                 <span>Outstanding Due</span>
                 <span>{formatCurrency(invoice.outstandingAmount)}</span>
               </div>

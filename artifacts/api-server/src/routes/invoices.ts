@@ -113,7 +113,8 @@ router.get("/invoices", async (req, res): Promise<void> => {
       paymentStatus: i.paymentStatus,
       paymentMode: i.paymentMode,
       grandTotal: i.grandTotal,
-      outstandingAmount: i.paymentStatus === "unpaid" ? i.grandTotal : 0,
+      outstandingAmount: Math.max(0, i.grandTotal - (i.amountPaid || 0)),
+      amountPaid: i.amountPaid || 0,
       totalProfit: i.totalProfit,
       itemCount: itemCounts[i.id] || 0,
       createdAt: i.createdAt.toISOString(),
@@ -132,7 +133,7 @@ router.post("/invoices", async (req, res): Promise<void> => {
     return;
   }
 
-  const { customerId, date, items, notes, overallDiscountPercent = 0, paymentMode = "credit" } = parsed.data;
+  const { customerId, date, items, notes, overallDiscountPercent = 0, paymentMode = "credit", amountPaid = 0 } = parsed.data;
 
   const productIds = items.map(i => i.productId);
   const products = await db.select().from(productsTable)
@@ -191,15 +192,21 @@ router.post("/invoices", async (req, res): Promise<void> => {
 
   const grandTotal = subtotal + totalGst;
 
+  const roundedGrandTotal = Math.round(grandTotal * 100) / 100;
+  const roundedAmountPaid = Math.min(Math.round((amountPaid || 0) * 100) / 100, roundedGrandTotal);
+  const autoPaymentStatus: "paid" | "unpaid" = roundedAmountPaid >= roundedGrandTotal ? "paid" : "unpaid";
+
   const [invoice] = await db.insert(invoicesTable).values({
     invoiceNumber,
     customerId: customerId || null,
     date,
     paymentMode: paymentMode as "cash" | "credit",
+    paymentStatus: autoPaymentStatus,
     subtotal: Math.round(subtotal * 100) / 100,
     totalGst: Math.round(totalGst * 100) / 100,
     totalDiscount: Math.round(totalDiscount * 100) / 100,
-    grandTotal: Math.round(grandTotal * 100) / 100,
+    grandTotal: roundedGrandTotal,
+    amountPaid: roundedAmountPaid,
     totalProfit: Math.round(totalProfit * 100) / 100,
     notes: notes || null,
   }).returning();
@@ -249,7 +256,8 @@ router.post("/invoices", async (req, res): Promise<void> => {
     totalGst: invoice.totalGst,
     totalDiscount: invoice.totalDiscount,
     grandTotal: invoice.grandTotal,
-    outstandingAmount: invoice.paymentStatus === "unpaid" ? invoice.grandTotal : 0,
+    amountPaid: invoice.amountPaid || 0,
+    outstandingAmount: Math.max(0, invoice.grandTotal - (invoice.amountPaid || 0)),
     totalProfit: invoice.totalProfit,
     notes: invoice.notes,
     createdAt: invoice.createdAt.toISOString(),
@@ -317,7 +325,8 @@ router.get("/invoices/:id", async (req, res): Promise<void> => {
     totalGst: invoice.totalGst,
     totalDiscount: invoice.totalDiscount,
     grandTotal: invoice.grandTotal,
-    outstandingAmount: invoice.paymentStatus === "unpaid" ? invoice.grandTotal : 0,
+    amountPaid: invoice.amountPaid || 0,
+    outstandingAmount: Math.max(0, invoice.grandTotal - (invoice.amountPaid || 0)),
     totalProfit: invoice.totalProfit,
     notes: invoice.notes,
     createdAt: invoice.createdAt.toISOString(),
@@ -349,7 +358,8 @@ router.patch("/invoices/:id/status", async (req, res): Promise<void> => {
   res.json({
     id: invoice.id,
     paymentStatus: invoice.paymentStatus,
-    outstandingAmount: invoice.paymentStatus === "unpaid" ? invoice.grandTotal : 0,
+    amountPaid: invoice.amountPaid || 0,
+    outstandingAmount: Math.max(0, invoice.grandTotal - (invoice.amountPaid || 0)),
   });
 });
 
