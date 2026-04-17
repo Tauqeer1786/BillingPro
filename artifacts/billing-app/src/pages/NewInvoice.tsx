@@ -274,13 +274,13 @@ export function NewInvoice() {
   }, [items, overallDiscount]);
 
   async function handleSubmit() {
-    if (items.length === 0) {
+    const filledItems = items.filter((item) => item.productId);
+    if (filledItems.length === 0) {
       toast({ title: "Error", description: "Add at least one item", variant: "destructive" });
       return;
     }
-    if (items.some((item) => !item.productId)) {
-      toast({ title: "Error", description: "Select a product for every item row", variant: "destructive" });
-      return;
+    if (filledItems.length < items.length) {
+      setItems(filledItems);
     }
 
     try {
@@ -289,7 +289,7 @@ export function NewInvoice() {
           customerId: customerId ? parseInt(customerId) : undefined,
           date,
           paymentMode,
-          items: items.map(item => ({
+          items: filledItems.map(item => ({
             productId: item.productId,
             quantity: item.quantity,
             unitPrice: item.unitPrice,
