@@ -8,7 +8,6 @@ import { Link, useLocation } from "wouter";
 import { useBusinessProfile } from "@/hooks/use-business-profile";
 import { useRef, useState, useEffect } from "react";
 import { jsPDF } from "jspdf";
-import html2canvas from "html2canvas";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 
@@ -148,38 +147,239 @@ export function InvoiceDetail({ id }: { id: number }) {
     }, 400);
   }
 
-  async function handleDownloadPdf() {
-    const content = printRef.current;
-    if (!content) return;
-
+  function handleDownloadPdf() {
     const isA5 = profile.printPageSize === "A5";
-    const pageFormatMm = isA5 ? { w: 148, h: 210 } : { w: 210, h: 297 };
-    const pagePaddingMm = isA5 ? 8 : 10;
-
-    const canvas = await html2canvas(content, {
-      scale: 3,
-      useCORS: true,
-      backgroundColor: "#ffffff",
-      logging: false,
-    });
-
-    const imgData = canvas.toDataURL("image/png");
     const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: isA5 ? "a5" : "a4" });
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = isA5 ? 8 : 10;
+    const contentWidth = pageWidth - margin * 2;
+    let y = margin + 2;
+    const safe = (v: unknown) => String(v ?? "").replace(/₹/g, "Rs.");
+    const money = (v: number) => safe(formatCurrency(v));
+    const fs = isA5 ? 6 : 7;
+    const lineH = isA5 ? 3.2 : 3.8;
 
-    const availW = pageFormatMm.w - pagePaddingMm * 2;
-    const availH = pageFormatMm.h - pagePaddingMm * 2;
+    doc.setDrawColor(34, 34, 34);
+    doc.setLineWidth(0.6);
+    doc.rect(margin - 2, margin - 2, contentWidth + 4, pageHeight - margin * 2 + 4);
 
-    const canvasAspect = canvas.height / canvas.width;
-    let imgW = availW;
-    let imgH = imgW * canvasAspect;
+    const innerL = margin + 2;
+    const innerW = contentWidth - 4;
 
-    if (imgH > availH) {
-      imgH = availH;
-      imgW = imgH / canvasAspect;
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(isA5 ? 13 : 17);
+    const bizLabel = safe(profile.name) + " (TAX INVOICE)";
+    doc.text(bizLabel, innerL, y + 4);
+
+    if (profile.phone) {
+      doc.setFontSize(isA5 ? 9 : 11);
+      doc.text(safe(profile.phone), innerL, y + (isA5 ? 9 : 11));
+    }
+    if (profile.gstin) {
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(fs);
+      doc.text("GST NO: " + safe(profile.gstin), innerL, y + (isA5 ? 13 : 16));
     }
 
-    const x = pagePaddingMm + (availW - imgW) / 2;
-    doc.addImage(imgData, "PNG", x, pagePaddingMm, imgW, imgH);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(fs);
+    let addrY = y + 4;
+    const addrX = innerL + innerW;
+    if (profile.address) { doc.text(safe(profile.address), addrX, addrY, { align: "right" }); addrY += lineH; }
+    if (profile.city) { doc.text(safe(profile.city), addrX, addrY, { align: "right" }); addrY += lineH; }
+    if (profile.email) { doc.text("Ph:" + safe(profile.email), addrX, addrY, { align: "right" }); }
+
+    y += isA5 ? 18 : 22;
+    doc.setDrawColor(85, 85, 85);
+    doc.setLineWidth(0.3);
+    doc.line(innerL, y, innerL + innerW, y);
+    y += 3;
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(isA5 ? 9 : 11);
+    doc.text(safe(invoice.customerName || "Walk-in Customer"), innerL, y + 3);
+    if (invoice.customerAddress) {
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(fs);
+      doc.text(safe(invoice.customerAddress), innerL, y + 3 + lineH + 0.5);
+    }
+
+    const billX = innerL + innerW;
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(isA5 ? 9 : 11);
+    const modeLabel = invoice.paymentMode === "cash" ? "CASH" : "CREDIT";
+    doc.text("BILL NO: " + safe(invoice.invoiceNumber) + "  (" + modeLabel + ")", billX, y + 3, { align: "right" });
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(fs);
+    doc.text("DATE: " + formatDate(invoice.date), billX, y + 3 + lineH + 0.5, { align: "right" });
+
+    y += isA5 ? 12 : 15;
+    doc.setDrawColor(187, 187, 187);
+    doc.line(innerL, y, innerL + innerW, y);
+    y += 2.5;
+
+    if (invoice.customerGstin || invoice.customerPhone) {
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(fs);
+      let pX = innerL;
+      if (invoice.customerGstin) {
+        doc.text("PARTY GST NO: " + safe(invoice.customerGstin), pX, y + 2.5);
+        pX += 55;
+      }
+      if (invoice.customerPhone) {
+        doc.text("PH.NO: " + safe(invoice.customerPhone), pX, y + 2.5);
+      }
+      y += lineH + 2;
+      doc.setDrawColor(187, 187, 187);
+      doc.line(innerL, y, innerL + innerW, y);
+      y += 2.5;
+    }
+
+    const colWidths = isA5
+      ? [5, innerW - 92, 13, 9, 16, 9, 9, 9, 22]
+      : [6, innerW - 110, 15, 11, 20, 11, 11, 11, 25];
+    const colHeaders = ["Sr.", "Item", "HSN COD", "Qty", "Rate", "Disc%", "CGST%", "SGST%", "Amount"];
+    const colAligns: ("left" | "right" | "center")[] = ["center", "left", "center", "center", "right", "center", "center", "center", "right"];
+
+    const rowH = isA5 ? 4.5 : 5.5;
+    const tblFont = isA5 ? 5.5 : 6.5;
+
+    const drawRow = (vals: string[], fillColor?: [number, number, number], bold = false) => {
+      if (fillColor) { doc.setFillColor(...fillColor); doc.rect(innerL, y, innerW, rowH, "F"); }
+      doc.setDrawColor(136, 136, 136);
+      doc.rect(innerL, y, innerW, rowH);
+      doc.setFont("helvetica", bold ? "bold" : "normal");
+      doc.setFontSize(tblFont);
+      let cx = innerL;
+      vals.forEach((v, i) => {
+        const tx = colAligns[i] === "right" ? cx + colWidths[i] - 1 : colAligns[i] === "center" ? cx + colWidths[i] / 2 : cx + 1.5;
+        const displayVal = i === 1 ? (doc.splitTextToSize(safe(v), colWidths[i] - 3)[0] || safe(v)) : safe(v);
+        doc.text(displayVal, tx, y + rowH - 1.5, { align: colAligns[i] });
+        cx += colWidths[i];
+        if (i < vals.length - 1) { doc.setDrawColor(136, 136, 136); doc.line(cx, y, cx, y + rowH); }
+      });
+      y += rowH;
+    };
+
+    drawRow(colHeaders, [240, 240, 240], true);
+
+    doc.setDrawColor(170, 170, 170);
+    let totalQty = 0;
+    invoice.items.forEach((item, idx) => {
+      totalQty += item.quantity;
+      const cgstPct = item.gstPercent / 2;
+      const sgstPct = item.gstPercent / 2;
+      drawRow([
+        String(idx + 1),
+        item.productName,
+        "",
+        String(item.quantity),
+        money(item.unitPrice),
+        item.discountPercent ? String(item.discountPercent) + "%" : "",
+        cgstPct ? cgstPct + "%" : "",
+        sgstPct ? sgstPct + "%" : "",
+        money(item.totalAmount),
+      ], idx % 2 === 1 ? [250, 250, 250] : undefined);
+    });
+
+    drawRow(["", "", "", String(totalQty), "", "", "", "", ""], [240, 240, 240], true);
+
+    y += 2;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(fs);
+    doc.text("Rs.In Word: " + numberToWords(invoice.grandTotal), innerL, y + 2);
+    y += lineH + 2;
+    doc.setDrawColor(187, 187, 187);
+    doc.setLineWidth(0.2);
+    doc.line(innerL, y, innerL + innerW, y);
+    y += 3;
+
+    const bankColWidth = innerW * 0.52;
+    const gstColX = innerL + bankColWidth + 3;
+    const gstColWidth = innerW - bankColWidth - 3;
+    let bankY = y;
+
+    doc.setFontSize(fs);
+    if (invoice.notes) {
+      doc.setFont("helvetica", "bold");
+      const narLines = doc.splitTextToSize("NARRATION: " + safe(invoice.notes), bankColWidth - 2);
+      doc.text(narLines, innerL, bankY + lineH);
+      bankY += narLines.length * lineH + 1;
+      doc.setFont("helvetica", "normal");
+    }
+    if (profile.bankAccount) {
+      const bankLine = "SBI A/C NO: " + safe(profile.bankAccount) + (profile.bankIfsc ? "   IFSC CODE: " + safe(profile.bankIfsc) : "");
+      const bLines = doc.splitTextToSize(bankLine, bankColWidth - 2);
+      doc.text(bLines, innerL, bankY + lineH);
+      bankY += bLines.length * lineH + 1;
+    } else if (profile.bankIfsc) {
+      doc.text("IFSC CODE: " + safe(profile.bankIfsc), innerL, bankY + lineH);
+      bankY += lineH + 1;
+    }
+    if (profile.bankName && !profile.bankAccount) {
+      doc.text("Bank: " + safe(profile.bankName), innerL, bankY + lineH);
+      bankY += lineH + 1;
+    }
+    if (profile.gstin) {
+      doc.setFont("helvetica", "bold");
+      doc.text("GST NO: " + safe(profile.gstin), innerL, bankY + lineH);
+      bankY += lineH + 1;
+      doc.setFont("helvetica", "normal");
+    }
+
+    const cgst = invoice.totalGst / 2;
+    const sgst = invoice.totalGst / 2;
+    const gstRows: [string, string, boolean][] = [
+      ["Total Amount Before GST", money(invoice.subtotal), false],
+      ["Add: CGST", money(cgst), false],
+      ["Add: SGST", money(sgst), false],
+      ["Tax Amount GST", money(invoice.totalGst), false],
+      ...(invoice.totalDiscount > 0 ? [["Less: Discount", "-" + money(invoice.totalDiscount), false] as [string, string, boolean]] : []),
+      ["Net Amount", money(invoice.grandTotal), true],
+      ...(invoice.amountPaid > 0 ? [["Amount Paid", money(invoice.amountPaid), false] as [string, string, boolean]] : []),
+      ...(invoice.outstandingAmount > 0 ? [["Outstanding Due", money(invoice.outstandingAmount), false] as [string, string, boolean]] : []),
+    ];
+    const gstRH = isA5 ? 4 : 4.8;
+    let gstY = y;
+    doc.setFontSize(isA5 ? 5.5 : 6.5);
+    gstRows.forEach(([label, value, bold]) => {
+      if (bold) { doc.setFillColor(230, 230, 230); doc.rect(gstColX, gstY, gstColWidth, gstRH, "F"); }
+      doc.setDrawColor(136, 136, 136);
+      doc.rect(gstColX, gstY, gstColWidth, gstRH);
+      doc.setFont("helvetica", bold ? "bold" : "normal");
+      doc.text(label, gstColX + 1.5, gstY + gstRH - 1.5);
+      doc.text(value, gstColX + gstColWidth - 1.5, gstY + gstRH - 1.5, { align: "right" });
+      gstY += gstRH;
+    });
+
+    y = Math.max(bankY + lineH + 3, gstY + 3);
+    doc.setDrawColor(136, 136, 136);
+    doc.setLineWidth(0.3);
+    doc.line(innerL, y, innerL + innerW, y);
+    y += 4;
+
+    const sigW = innerW / 3;
+    const sigLabelY = y + (isA5 ? 17 : 22);
+    const sigLineY = y + (isA5 ? 19 : 24);
+    const sigs = ["Receiver's Signature", "Seller's Authorized Signature", safe(profile.name) + "\nAuthorized Signatory"];
+    sigs.forEach((label, i) => {
+      const cx2 = innerL + sigW * i + sigW / 2;
+      if (i === 2 && profile.name) {
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(fs);
+        doc.text(safe(profile.name), cx2, y + (isA5 ? 9 : 11), { align: "center" });
+        doc.setFont("helvetica", "normal");
+        doc.text("Authorized Signatory", cx2, sigLabelY, { align: "center" });
+      } else {
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(fs);
+        doc.text(label, cx2, sigLabelY, { align: "center" });
+      }
+      doc.setDrawColor(68, 68, 68);
+      doc.line(innerL + sigW * i + 3, sigLineY, innerL + sigW * (i + 1) - 3, sigLineY);
+    });
+
     doc.save(`${invoice.invoiceNumber}.pdf`);
   }
 
