@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useLocation } from "wouter";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { customFetch } from "@workspace/api-client-react";
@@ -47,8 +47,8 @@ function usePastSuppliers(): string[] {
   const seen = new Set<string>();
   const unique: string[] = [];
   for (const p of data.purchases) {
-    const key = p.supplierName.trim().toLowerCase();
-    if (!seen.has(key)) { seen.add(key); unique.push(p.supplierName.trim()); }
+    const k = p.supplierName.trim().toLowerCase();
+    if (!seen.has(k)) { seen.add(k); unique.push(p.supplierName.trim()); }
   }
   return unique;
 }
@@ -57,7 +57,43 @@ function emptyItem(): PurchaseItem {
   return { key: crypto.randomUUID(), productId: null, productName: "", quantity: "", costPrice: "" };
 }
 
-interface FixedDropdownPos { top: number; left: number; width: number }
+interface FixedPos { top: number; left: number; width: number }
+
+function useDropdown() {
+  const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState<FixedPos | null>(null);
+  const [activeIdx, setActiveIdx] = useState(-1);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const justSelectedRef = useRef(false);
+
+  function calcPos() {
+    if (inputRef.current) {
+      const r = inputRef.current.getBoundingClientRect();
+      setPos({ top: r.bottom + 4, left: r.left, width: r.width });
+    }
+  }
+
+  function openDropdown() { calcPos(); setOpen(true); }
+  function closeDropdown() { setOpen(false); setActiveIdx(-1); }
+
+  useEffect(() => {
+    if (!open) return;
+    function handleClick(e: MouseEvent) {
+      if (!inputRef.current?.contains(e.target as Node)) closeDropdown();
+    }
+    function handleScroll() { closeDropdown(); }
+    document.addEventListener("mousedown", handleClick);
+    window.addEventListener("scroll", handleScroll, true);
+    window.addEventListener("resize", handleScroll);
+    return () => {
+      document.removeEventListener("mousedown", handleClick);
+      window.removeEventListener("scroll", handleScroll, true);
+      window.removeEventListener("resize", handleScroll);
+    };
+  }, [open]);
+
+  return { open, pos, activeIdx, setActiveIdx, inputRef, justSelectedRef, openDropdown, closeDropdown, calcPos };
+}
 
 interface SupplierAutocompleteProps {
   value: string;
@@ -66,48 +102,37 @@ interface SupplierAutocompleteProps {
 }
 
 function SupplierAutocomplete({ value, suppliers, onChange }: SupplierAutocompleteProps) {
-  const [open, setOpen] = useState(false);
-  const [activeIdx, setActiveIdx] = useState(-1);
-  const [pos, setPos] = useState<FixedDropdownPos | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const { open, pos, activeIdx, setActiveIdx, inputRef, justSelectedRef, openDropdown, closeDropdown } = useDropdown();
 
   const suggestions = value.length >= 2
     ? suppliers.filter(s => s.toLowerCase().includes(value.toLowerCase())).slice(0, 8)
     : [];
 
-  function recalcPos() {
-    if (inputRef.current) {
-      const r = inputRef.current.getBoundingClientRect();
-      setPos({ top: r.bottom + 4, left: r.left, width: r.width });
+  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const v = e.target.value;
+    onChange(v);
+    if (v.length >= 2) {
+      const m = suppliers.filter(s => s.toLowerCase().includes(v.toLowerCase()));
+      if (m.length > 0) openDropdown(); else closeDropdown();
+    } else {
+      closeDropdown();
     }
+    setActiveIdx(-1);
   }
 
-  useEffect(() => {
-    setActiveIdx(-1);
-    if (value.length >= 2 && suggestions.length > 0) {
-      recalcPos();
-      setOpen(true);
-    } else {
-      setOpen(false);
-    }
-  }, [value, suggestions.length]);
-
-  useEffect(() => {
-    if (!open) return;
-    function close() { setOpen(false); }
-    window.addEventListener("scroll", close, true);
-    window.addEventListener("resize", close);
-    return () => { window.removeEventListener("scroll", close, true); window.removeEventListener("resize", close); };
-  }, [open]);
-
-  function select(s: string) { onChange(s); setOpen(false); }
+  function select(s: string) {
+    justSelectedRef.current = true;
+    onChange(s);
+    closeDropdown();
+  }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
-    if (!open) return;
-    if (e.key === "ArrowDown") { e.preventDefault(); setActiveIdx(i => Math.min(i + 1, suggestions.length - 1)); }
-    else if (e.key === "ArrowUp") { e.preventDefault(); setActiveIdx(i => Math.max(i - 1, 0)); }
-    else if (e.key === "Enter" && activeIdx >= 0) { e.preventDefault(); select(suggestions[activeIdx]); }
-    else if (e.key === "Escape") setOpen(false);
+    if (open && suggestions.length > 0) {
+      if (e.key === "ArrowDown") { e.preventDefault(); setActiveIdx(i => Math.min(i + 1, suggestions.length - 1)); return; }
+      if (e.key === "ArrowUp") { e.preventDefault(); setActiveIdx(i => Math.max(i - 1, 0)); return; }
+      if (e.key === "Enter" && activeIdx >= 0) { e.preventDefault(); select(suggestions[activeIdx]); return; }
+    }
+    if (e.key === "Escape") closeDropdown();
   }
 
   return (
@@ -115,9 +140,9 @@ function SupplierAutocomplete({ value, suppliers, onChange }: SupplierAutocomple
       <Input
         ref={inputRef}
         value={value}
-        onChange={e => onChange(e.target.value)}
+        onChange={handleChange}
         onKeyDown={handleKeyDown}
-        onFocus={() => value.length >= 2 && suggestions.length > 0 && (recalcPos(), setOpen(true))}
+        onBlur={() => setTimeout(closeDropdown, 150)}
         placeholder="e.g. Rahul Enterprises"
         autoComplete="off"
         required
@@ -125,15 +150,12 @@ function SupplierAutocomplete({ value, suppliers, onChange }: SupplierAutocomple
       {open && pos && suggestions.length > 0 && (
         <ul
           style={{ position: "fixed", top: pos.top, left: pos.left, width: pos.width, zIndex: 9999 }}
-          className="bg-popover border border-border rounded-md shadow-lg overflow-hidden max-h-48 overflow-y-auto text-sm"
+          className="bg-popover border border-border rounded-md shadow-lg overflow-y-auto max-h-48 text-sm"
         >
           {suggestions.map((s, idx) => (
             <li
               key={s}
-              className={cn(
-                "px-3 py-2 cursor-pointer select-none",
-                idx === activeIdx ? "bg-accent text-accent-foreground" : "hover:bg-muted"
-              )}
+              className={cn("px-3 py-2 cursor-pointer select-none", idx === activeIdx ? "bg-accent text-accent-foreground" : "hover:bg-muted")}
               onMouseDown={e => { e.preventDefault(); select(s); }}
               onMouseEnter={() => setActiveIdx(idx)}
             >
@@ -152,47 +174,38 @@ interface ProductAutocompleteProps {
   products: ProductOption[];
   onChange: (name: string, product?: ProductOption | null) => void;
   onTab?: () => void;
+  onEnter?: () => void;
+  registerRef?: (el: HTMLInputElement | null) => void;
 }
 
-function ProductAutocomplete({ value, productId, products, onChange, onTab }: ProductAutocompleteProps) {
-  const [open, setOpen] = useState(false);
-  const [activeIdx, setActiveIdx] = useState(-1);
-  const [pos, setPos] = useState<FixedDropdownPos | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+function ProductAutocomplete({ value, productId, products, onChange, onTab, onEnter, registerRef }: ProductAutocompleteProps) {
+  const { open, pos, activeIdx, setActiveIdx, inputRef, justSelectedRef, openDropdown, closeDropdown } = useDropdown();
 
   const suggestions = value.length >= 2
     ? products.filter(p => p.name.toLowerCase().includes(value.toLowerCase())).slice(0, 8)
     : [];
 
-  function recalcPos() {
-    if (inputRef.current) {
-      const r = inputRef.current.getBoundingClientRect();
-      setPos({ top: r.bottom + 4, left: r.left, width: Math.max(r.width, 280) });
+  const setInputRef = useCallback((el: HTMLInputElement | null) => {
+    (inputRef as React.MutableRefObject<HTMLInputElement | null>).current = el;
+    registerRef?.(el);
+  }, [registerRef]);
+
+  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const v = e.target.value;
+    onChange(v, null);
+    if (v.length >= 2) {
+      const m = products.filter(p => p.name.toLowerCase().includes(v.toLowerCase()));
+      if (m.length > 0) openDropdown(); else closeDropdown();
+    } else {
+      closeDropdown();
     }
+    setActiveIdx(-1);
   }
 
-  useEffect(() => {
-    setActiveIdx(-1);
-    if (value.length >= 2 && suggestions.length > 0) {
-      recalcPos();
-      setOpen(true);
-    } else {
-      setOpen(false);
-    }
-  }, [value, suggestions.length]);
-
-  useEffect(() => {
-    if (!open) return;
-    function close() { setOpen(false); }
-    window.addEventListener("scroll", close, true);
-    window.addEventListener("resize", close);
-    return () => { window.removeEventListener("scroll", close, true); window.removeEventListener("resize", close); };
-  }, [open]);
-
-  function selectProduct(product: ProductOption) {
-    onChange(product.name, product);
-    setOpen(false);
-    setActiveIdx(-1);
+  function selectProduct(p: ProductOption) {
+    justSelectedRef.current = true;
+    onChange(p.name, p);
+    closeDropdown();
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
@@ -200,20 +213,21 @@ function ProductAutocomplete({ value, productId, products, onChange, onTab }: Pr
       if (e.key === "ArrowDown") { e.preventDefault(); setActiveIdx(i => Math.min(i + 1, suggestions.length - 1)); return; }
       if (e.key === "ArrowUp") { e.preventDefault(); setActiveIdx(i => Math.max(i - 1, 0)); return; }
       if (e.key === "Enter" && activeIdx >= 0) { e.preventDefault(); selectProduct(suggestions[activeIdx]); return; }
-      if (e.key === "Escape") { setOpen(false); return; }
+      if (e.key === "Escape") { closeDropdown(); return; }
     }
-    if (e.key === "Tab" && onTab) { setOpen(false); onTab(); }
+    if (e.key === "Enter") { e.preventDefault(); closeDropdown(); onEnter?.(); return; }
+    if (e.key === "Tab") { closeDropdown(); onTab?.(); }
   }
 
   return (
     <>
       <div className="relative w-full">
         <Input
-          ref={inputRef}
+          ref={setInputRef}
           value={value}
-          onChange={e => onChange(e.target.value, null)}
+          onChange={handleChange}
           onKeyDown={handleKeyDown}
-          onFocus={() => value.length >= 2 && suggestions.length > 0 && (recalcPos(), setOpen(true))}
+          onBlur={() => setTimeout(closeDropdown, 150)}
           placeholder="Type product name..."
           className={cn("h-8 text-sm pr-7", productId && "border-green-400 dark:border-green-600")}
           autoComplete="off"
@@ -224,16 +238,13 @@ function ProductAutocomplete({ value, productId, products, onChange, onTab }: Pr
       </div>
       {open && pos && suggestions.length > 0 && (
         <ul
-          style={{ position: "fixed", top: pos.top, left: pos.left, width: pos.width, zIndex: 9999 }}
-          className="bg-popover border border-border rounded-md shadow-lg overflow-hidden max-h-56 overflow-y-auto text-sm"
+          style={{ position: "fixed", top: pos.top, left: pos.left, width: Math.max(pos.width, 280), zIndex: 9999 }}
+          className="bg-popover border border-border rounded-md shadow-lg overflow-y-auto max-h-56 text-sm"
         >
           {suggestions.map((p, idx) => (
             <li
               key={p.id}
-              className={cn(
-                "flex items-center justify-between gap-2 px-3 py-2 cursor-pointer select-none",
-                idx === activeIdx ? "bg-accent text-accent-foreground" : "hover:bg-muted"
-              )}
+              className={cn("flex items-center justify-between gap-2 px-3 py-2 cursor-pointer select-none", idx === activeIdx ? "bg-accent text-accent-foreground" : "hover:bg-muted")}
               onMouseDown={e => { e.preventDefault(); selectProduct(p); }}
               onMouseEnter={() => setActiveIdx(idx)}
             >
@@ -248,7 +259,7 @@ function ProductAutocomplete({ value, productId, products, onChange, onTab }: Pr
           ))}
           {!products.some(p => p.name.toLowerCase() === value.toLowerCase()) && (
             <li className="px-3 py-2 text-xs text-muted-foreground italic border-t">
-              Keep typing to add "{value}" as a new product
+              Keep typing to add "{value}" as new product
             </li>
           )}
         </ul>
@@ -264,7 +275,6 @@ export function NewPurchase() {
 
   const { data: productsData } = useProducts();
   const products = productsData?.products || [];
-
   const pastSuppliers = usePastSuppliers();
 
   const today = new Date().toISOString().split("T")[0];
@@ -274,6 +284,7 @@ export function NewPurchase() {
   const [items, setItems] = useState<PurchaseItem[]>([emptyItem(), emptyItem(), emptyItem()]);
 
   const qtyRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const productRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   const createMutation = useMutation({
     mutationFn: (body: object) =>
@@ -302,8 +313,25 @@ export function NewPurchase() {
     }
   }
 
-  function addRow() {
-    setItems(prev => [...prev, emptyItem()]);
+  function addRow(afterKey?: string) {
+    const newRow = emptyItem();
+    setItems(prev => {
+      if (!afterKey) return [...prev, newRow];
+      const idx = prev.findIndex(i => i.key === afterKey);
+      const next = [...prev];
+      next.splice(idx + 1, 0, newRow);
+      return next;
+    });
+    setTimeout(() => productRefs.current[newRow.key]?.focus(), 30);
+  }
+
+  function handleEnterOnProduct(key: string) {
+    const idx = items.findIndex(i => i.key === key);
+    if (idx < items.length - 1) {
+      productRefs.current[items[idx + 1].key]?.focus();
+    } else {
+      addRow(key);
+    }
   }
 
   function removeRow(key: string) {
@@ -317,23 +345,28 @@ export function NewPurchase() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+
+    const filled = items.filter(i => i.productName.trim() && Number(i.quantity) > 0);
+
     if (!supplierName.trim()) { toast({ title: "Supplier name is required", variant: "destructive" }); return; }
     if (!date) { toast({ title: "Date is required", variant: "destructive" }); return; }
-    if (filledItems.length === 0) { toast({ title: "Add at least one item with name and quantity", variant: "destructive" }); return; }
+    if (filled.length === 0) { toast({ title: "Add at least one item with name and quantity", variant: "destructive" }); return; }
+
+    setItems(filled);
 
     try {
       await createMutation.mutateAsync({
         supplierName: supplierName.trim(),
         date,
         notes: notes.trim() || undefined,
-        items: filledItems.map(i => ({
+        items: filled.map(i => ({
           productId: i.productId || undefined,
           productName: i.productName.trim(),
           quantity: Number(i.quantity),
           costPrice: Number(i.costPrice) || 0,
         })),
       });
-      toast({ title: "Purchase recorded", description: `${filledItems.length} item(s) added to stock.` });
+      toast({ title: "Purchase recorded", description: `${filled.length} item(s) added to stock.` });
       navigate("/purchases");
     } catch {
       toast({ title: "Failed to save purchase", variant: "destructive" });
@@ -385,83 +418,87 @@ export function NewPurchase() {
           <CardHeader>
             <CardTitle className="text-base">Items Purchased</CardTitle>
             <p className="text-sm text-muted-foreground">
-              Type 2+ letters to search your inventory. Select a suggestion to auto-fill cost price, or keep typing to add a new product.
+              Type 2+ letters to search inventory. Press <kbd className="px-1 py-0.5 text-xs border rounded">Enter</kbd> after each product to jump to the next row.
             </p>
           </CardHeader>
           <CardContent className="space-y-3">
-            <table className="w-full text-sm min-w-[500px]">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left pb-2 font-medium text-muted-foreground">Product</th>
-                  <th className="text-right pb-2 font-medium text-muted-foreground w-24">Qty</th>
-                  <th className="text-right pb-2 font-medium text-muted-foreground w-32">Cost Price (₹)</th>
-                  <th className="text-right pb-2 font-medium text-muted-foreground w-28">Total</th>
-                  <th className="w-10"></th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {items.map((item) => (
-                  <tr key={item.key}>
-                    <td className="py-2 pr-3">
-                      <div className="flex items-center gap-1.5">
-                        <ProductAutocomplete
-                          value={item.productName}
-                          productId={item.productId}
-                          products={products}
-                          onChange={(name, product) => handleProductChange(item.key, name, product)}
-                          onTab={() => qtyRefs.current[item.key]?.focus()}
-                        />
-                        {item.productId && (
-                          <span className="shrink-0 text-xs text-green-600 dark:text-green-400 font-medium whitespace-nowrap">
-                            Linked
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="py-2 pr-3">
-                      <Input
-                        ref={el => { qtyRefs.current[item.key] = el; }}
-                        type="number"
-                        min="1"
-                        className="h-8 text-right text-sm"
-                        placeholder="0"
-                        value={item.quantity}
-                        onChange={e => updateItem(item.key, { quantity: e.target.value })}
-                      />
-                    </td>
-                    <td className="py-2 pr-3">
-                      <Input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        className="h-8 text-right text-sm"
-                        placeholder="0.00"
-                        value={item.costPrice}
-                        onChange={e => updateItem(item.key, { costPrice: e.target.value })}
-                      />
-                    </td>
-                    <td className="py-2 pr-3 text-right font-medium tabular-nums">
-                      {item.quantity && item.costPrice
-                        ? `₹${(Number(item.quantity) * Number(item.costPrice)).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`
-                        : "—"}
-                    </td>
-                    <td className="py-2">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                        onClick={() => removeRow(item.key)}
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </Button>
-                    </td>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm min-w-[500px]">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left pb-2 font-medium text-muted-foreground">Product</th>
+                    <th className="text-right pb-2 font-medium text-muted-foreground w-24">Qty</th>
+                    <th className="text-right pb-2 font-medium text-muted-foreground w-32">Cost Price (₹)</th>
+                    <th className="text-right pb-2 font-medium text-muted-foreground w-28">Total</th>
+                    <th className="w-10"></th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y">
+                  {items.map((item) => (
+                    <tr key={item.key}>
+                      <td className="py-2 pr-3">
+                        <div className="flex items-center gap-1.5">
+                          <ProductAutocomplete
+                            value={item.productName}
+                            productId={item.productId}
+                            products={products}
+                            onChange={(name, product) => handleProductChange(item.key, name, product)}
+                            onTab={() => qtyRefs.current[item.key]?.focus()}
+                            onEnter={() => handleEnterOnProduct(item.key)}
+                            registerRef={el => { productRefs.current[item.key] = el; }}
+                          />
+                          {item.productId && (
+                            <span className="shrink-0 text-xs text-green-600 dark:text-green-400 font-medium whitespace-nowrap">
+                              Linked
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-2 pr-3">
+                        <Input
+                          ref={el => { qtyRefs.current[item.key] = el; }}
+                          type="number"
+                          min="1"
+                          className="h-8 text-right text-sm"
+                          placeholder="0"
+                          value={item.quantity}
+                          onChange={e => updateItem(item.key, { quantity: e.target.value })}
+                        />
+                      </td>
+                      <td className="py-2 pr-3">
+                        <Input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          className="h-8 text-right text-sm"
+                          placeholder="0.00"
+                          value={item.costPrice}
+                          onChange={e => updateItem(item.key, { costPrice: e.target.value })}
+                        />
+                      </td>
+                      <td className="py-2 pr-3 text-right font-medium tabular-nums">
+                        {item.quantity && item.costPrice
+                          ? `₹${(Number(item.quantity) * Number(item.costPrice)).toLocaleString("en-IN", { minimumFractionDigits: 2 })}`
+                          : "—"}
+                      </td>
+                      <td className="py-2">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                          onClick={() => removeRow(item.key)}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
 
-            <Button type="button" variant="outline" size="sm" onClick={addRow}>
+            <Button type="button" variant="outline" size="sm" onClick={() => addRow()}>
               <Plus className="w-3.5 h-3.5 mr-1" /> Add Row
             </Button>
 
