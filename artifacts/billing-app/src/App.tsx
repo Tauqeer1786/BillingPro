@@ -12,6 +12,9 @@ import { NewInvoice } from "@/pages/NewInvoice";
 import { InvoiceDetail } from "@/pages/InvoiceDetail";
 import { Reports } from "@/pages/Reports";
 import { Settings } from "@/pages/Settings";
+import { Purchases } from "@/pages/Purchases";
+import { NewPurchase } from "@/pages/NewPurchase";
+import { BulkAddProducts } from "@/pages/BulkAddProducts";
 
 const queryClient = new QueryClient();
 
@@ -20,12 +23,15 @@ function Router() {
     <Switch>
       <Route path="/" component={Dashboard} />
       <Route path="/products" component={Products} />
+      <Route path="/products/bulk-add" component={BulkAddProducts} />
       <Route path="/customers" component={Customers} />
       <Route path="/invoices" component={Invoices} />
       <Route path="/invoices/new" component={NewInvoice} />
       <Route path="/invoices/:id">
         {(params) => <InvoiceDetail id={parseInt(params.id)} />}
       </Route>
+      <Route path="/purchases" component={Purchases} />
+      <Route path="/purchases/new" component={NewPurchase} />
       <Route path="/reports" component={Reports} />
       <Route path="/settings" component={Settings} />
       <Route component={NotFound} />

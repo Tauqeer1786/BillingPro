@@ -5,13 +5,15 @@ import {
   Users, 
   FileText, 
   BarChart3, 
-  Settings 
+  Settings,
+  ShoppingCart,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/products", label: "Products", icon: Package },
+  { href: "/purchases", label: "Purchases", icon: ShoppingCart },
   { href: "/customers", label: "Customers", icon: Users },
   { href: "/invoices", label: "Invoices", icon: FileText },
   { href: "/reports", label: "Reports", icon: BarChart3 },

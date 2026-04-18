@@ -139,6 +139,52 @@ router.put("/products/:id", async (req, res): Promise<void> => {
   });
 });
 
+router.post("/products/bulk", async (req, res): Promise<void> => {
+  const { products } = req.body as {
+    products: Array<{
+      name: string;
+      quantity: number;
+      costPrice: number;
+      sellingPrice: number;
+      gstPercent?: number;
+      hsn?: string;
+      unit?: string;
+    }>;
+  };
+
+  if (!Array.isArray(products) || products.length === 0) {
+    res.status(400).json({ error: "products array is required" });
+    return;
+  }
+
+  const valid = products.filter(p => p.name?.trim() && p.costPrice >= 0 && p.sellingPrice >= 0);
+  if (valid.length === 0) {
+    res.status(400).json({ error: "No valid products provided" });
+    return;
+  }
+
+  const created = await db.insert(productsTable).values(
+    valid.map(p => {
+      const cost = Number(p.costPrice) || 0;
+      const sell = Number(p.sellingPrice) || 0;
+      const margin = cost > 0 ? Math.round(((sell - cost) / cost) * 100 * 100) / 100 : 0;
+      return {
+        name: p.name.trim(),
+        costPrice: cost,
+        sellingPrice: sell,
+        marginPercent: margin,
+        gstPercent: Number(p.gstPercent) || 0,
+        stock: Number(p.quantity) || 0,
+        hsn: p.hsn?.trim() || null,
+        unit: p.unit?.trim() || "pcs",
+        createdAt: new Date(),
+      };
+    })
+  ).returning();
+
+  res.status(201).json({ created: created.length, products: created.map(p => ({ id: p.id, name: p.name })) });
+});
+
 router.delete("/products/:id", async (req, res): Promise<void> => {
   const params = DeleteProductParams.safeParse(req.params);
   if (!params.success) {

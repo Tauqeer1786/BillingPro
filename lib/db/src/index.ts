@@ -86,6 +86,27 @@ export function initializeDb() {
     SET amount_paid = grand_total
     WHERE payment_status = 'paid' AND amount_paid = 0 AND grand_total > 0
   `);
+
+  sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS purchases (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      supplier_name TEXT NOT NULL,
+      date TEXT NOT NULL,
+      notes TEXT,
+      total_amount REAL NOT NULL DEFAULT 0,
+      created_at INTEGER NOT NULL DEFAULT (unixepoch())
+    );
+
+    CREATE TABLE IF NOT EXISTS purchase_items (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      purchase_id INTEGER NOT NULL REFERENCES purchases(id) ON DELETE CASCADE,
+      product_id INTEGER REFERENCES products(id) ON DELETE SET NULL,
+      product_name TEXT NOT NULL,
+      quantity INTEGER NOT NULL,
+      cost_price REAL NOT NULL,
+      total_cost REAL NOT NULL
+    );
+  `);
 }
 
 export * from "./schema";

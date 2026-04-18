@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useListProducts, useCreateProduct, useUpdateProduct, useDeleteProduct, getListProductsQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatCurrency } from "@/lib/format";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil, Trash2, Search } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, PackagePlus } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface ProductForm {
@@ -25,6 +26,7 @@ interface ProductForm {
 const emptyForm: ProductForm = { name: "", costPrice: "", marginPercent: "", gstPercent: "18", stock: "0", hsn: "", unit: "pcs" };
 
 export function Products() {
+  const [, navigate] = useLocation();
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -101,9 +103,14 @@ export function Products() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <h1 className="text-3xl font-bold tracking-tight">Products</h1>
-        <Button onClick={openCreate}><Plus className="w-4 h-4 mr-2" />Add Product</Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => navigate("/products/bulk-add")}>
+            <PackagePlus className="w-4 h-4 mr-2" />Bulk Add
+          </Button>
+          <Button onClick={openCreate}><Plus className="w-4 h-4 mr-2" />Add Product</Button>
+        </div>
       </div>
 
       <div className="relative max-w-sm">

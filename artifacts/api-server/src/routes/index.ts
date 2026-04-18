@@ -7,6 +7,7 @@ import dashboardRouter from "./dashboard";
 import reportsRouter from "./reports";
 import backupRouter from "./backup";
 import financialYearsRouter from "./financial-years";
+import purchasesRouter from "./purchases";
 
 const router: IRouter = Router();
 
@@ -18,5 +19,6 @@ router.use(dashboardRouter);
 router.use(reportsRouter);
 router.use(backupRouter);
 router.use(financialYearsRouter);
+router.use(purchasesRouter);
 
 export default router;

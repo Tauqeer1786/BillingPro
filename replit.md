@@ -25,8 +25,10 @@ A professional billing web application for small businesses and shops in India. 
 - **Invoicing**: Multi-item invoices, smart product autocomplete with internal-only stock visibility while creating invoices, Enter-to-add-next-row fast entry, auto GST calculation, per-item and overall discounts, dynamic pricing with manual override, paid/unpaid status tracking with outstanding due amounts, Cash/Credit payment mode selection, compact A4/A5 print sizing for 15+ invoice items, direct PDF download, and separate print action
 - **Invoice Numbering**: Sequential 3/4-digit format (001, 025, 125, 1000) with zero-padding for numbers under 100. Numbers stored as formatted strings; unique and auto-incrementing.
 - **Reports**: Sales (daily/monthly/yearly), GST report by financial year (CGST/SGST/IGST), profit tracking with show/hide toggle, product-wise and customer-wise reports, Sales Register (Cash/Credit) with date range filter, totals breakdown, and print support
-- **Settings**: Business profile, invoice print page size (A4/A5), database backup (JSON export), and restore (JSON import)
-- **Financial Year**: April 1 - March 31 tracking across all views
+- **Purchase Management**: Record stock-in from suppliers with supplier name, date, notes, and multi-item purchase entries. Select from existing inventory products to auto-link and increment stock, or enter custom product names manually. Purchase history list with split-panel detail view. Delete reverses stock.
+- **Bulk Inventory Adder**: Excel-style table to add up to 100+ products at once. Columns: Product Name, Qty, Cost Price, Selling Price, GST%, HSN Code, Unit. Tab/Enter key navigation between cells, dynamic row addition, validation before submit, and success screen.
+- **Settings**: Business profile, invoice print page size (A4/A5), financial year start month (1-12, default April), database backup (JSON export), and restore (JSON import)
+- **Financial Year**: Configurable start month tracked across dashboard and all report views with FY year selector on Dashboard
 
 ## Key Commands
 
