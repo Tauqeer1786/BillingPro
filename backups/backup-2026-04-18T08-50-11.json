@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "exportedAt": "2026-04-17T01:18:20.005Z",
+  "exportedAt": "2026-04-18T08:50:11.187Z",
   "autoBackup": true,
   "products": [
     {
@@ -22,7 +22,7 @@
       "marginPercent": 8,
       "sellingPrice": 73440,
       "gstPercent": 18,
-      "stock": -17,
+      "stock": 72,
       "hsn": "85171200",
       "unit": "pcs",
       "createdAt": "2026-04-15T00:10:42.000Z"
@@ -46,7 +46,7 @@
       "marginPercent": 20,
       "sellingPrice": 15000,
       "gstPercent": 18,
-      "stock": 0,
+      "stock": 25,
       "hsn": "84433100",
       "unit": "pcs",
       "createdAt": "2026-04-15T00:10:42.000Z"
@@ -94,7 +94,7 @@
       "marginPercent": 25,
       "sellingPrice": 7500,
       "gstPercent": 18,
-      "stock": 17,
+      "stock": 127,
       "hsn": "85167900",
       "unit": "pcs",
       "createdAt": "2026-04-15T00:10:42.000Z"
@@ -106,10 +106,22 @@
       "marginPercent": 10,
       "sellingPrice": 110,
       "gstPercent": 2.5,
-      "stock": 99,
+      "stock": 199,
       "hsn": null,
       "unit": "pcs",
       "createdAt": "2026-04-15T08:26:04.000Z"
+    },
+    {
+      "id": 12,
+      "name": "ParleG Biscuit",
+      "costPrice": 4,
+      "marginPercent": 25,
+      "sellingPrice": 5,
+      "gstPercent": 2.5,
+      "stock": 52,
+      "hsn": null,
+      "unit": "pcs",
+      "createdAt": "2026-04-18T00:54:40.000Z"
     }
   ],
   "customers": [
@@ -406,6 +418,62 @@
       "totalProfit": 5440,
       "notes": null,
       "createdAt": "2026-04-17T01:14:52.000Z"
+    },
+    {
+      "id": 19,
+      "invoiceNumber": "018",
+      "customerId": null,
+      "date": "2026-04-17",
+      "paymentStatus": "paid",
+      "subtotal": 73440,
+      "totalGst": 13219.2,
+      "totalDiscount": 0,
+      "grandTotal": 86659.2,
+      "totalProfit": 5440,
+      "notes": null,
+      "createdAt": "2026-04-17T01:24:27.000Z"
+    },
+    {
+      "id": 20,
+      "invoiceNumber": "019",
+      "customerId": 2,
+      "date": "2026-04-17",
+      "paymentStatus": "paid",
+      "subtotal": 884400,
+      "totalGst": 159192,
+      "totalDiscount": 0,
+      "grandTotal": 1043592,
+      "totalProfit": 84400,
+      "notes": null,
+      "createdAt": "2026-04-17T02:26:15.000Z"
+    },
+    {
+      "id": 21,
+      "invoiceNumber": "020",
+      "customerId": null,
+      "date": "2026-04-17",
+      "paymentStatus": "paid",
+      "subtotal": 73440,
+      "totalGst": 13219.2,
+      "totalDiscount": 0,
+      "grandTotal": 86659.2,
+      "totalProfit": 5440,
+      "notes": null,
+      "createdAt": "2026-04-17T05:04:08.000Z"
+    },
+    {
+      "id": 22,
+      "invoiceNumber": "021",
+      "customerId": 2,
+      "date": "2026-04-18",
+      "paymentStatus": "paid",
+      "subtotal": 146930,
+      "totalGst": 26439.65,
+      "totalDiscount": 0,
+      "grandTotal": 173369.65,
+      "totalProfit": 10890,
+      "notes": null,
+      "createdAt": "2026-04-18T01:18:40.000Z"
     }
   ],
   "invoiceItems": [
@@ -933,6 +1001,96 @@
       "discountAmount": 0,
       "totalAmount": 86659.2,
       "profit": 5440
+    },
+    {
+      "id": 38,
+      "invoiceId": 19,
+      "productId": 2,
+      "productName": "Apple iPhone 15 128GB",
+      "quantity": 1,
+      "unitPrice": 73440,
+      "costPrice": 68000,
+      "gstPercent": 18,
+      "gstAmount": 13219.2,
+      "discountPercent": 0,
+      "discountAmount": 0,
+      "totalAmount": 86659.2,
+      "profit": 5440
+    },
+    {
+      "id": 39,
+      "invoiceId": 20,
+      "productId": 2,
+      "productName": "Apple iPhone 15 128GB",
+      "quantity": 10,
+      "unitPrice": 73440,
+      "costPrice": 68000,
+      "gstPercent": 18,
+      "gstAmount": 132192,
+      "discountPercent": 0,
+      "discountAmount": 0,
+      "totalAmount": 866592,
+      "profit": 54400
+    },
+    {
+      "id": 40,
+      "invoiceId": 20,
+      "productId": 8,
+      "productName": "Philips Air Fryer 4.1L",
+      "quantity": 20,
+      "unitPrice": 7500,
+      "costPrice": 6000,
+      "gstPercent": 18,
+      "gstAmount": 27000,
+      "discountPercent": 0,
+      "discountAmount": 0,
+      "totalAmount": 177000,
+      "profit": 30000
+    },
+    {
+      "id": 41,
+      "invoiceId": 21,
+      "productId": 2,
+      "productName": "Apple iPhone 15 128GB",
+      "quantity": 1,
+      "unitPrice": 73440,
+      "costPrice": 68000,
+      "gstPercent": 18,
+      "gstAmount": 13219.2,
+      "discountPercent": 0,
+      "discountAmount": 0,
+      "totalAmount": 86659.2,
+      "profit": 5440
+    },
+    {
+      "id": 42,
+      "invoiceId": 22,
+      "productId": 12,
+      "productName": "ParleG Biscuit",
+      "quantity": 10,
+      "unitPrice": 5,
+      "costPrice": 4,
+      "gstPercent": 2.5,
+      "gstAmount": 1.25,
+      "discountPercent": 0,
+      "discountAmount": 0,
+      "totalAmount": 51.25,
+      "profit": 10
+    },
+    {
+      "id": 43,
+      "invoiceId": 22,
+      "productId": 2,
+      "productName": "Apple iPhone 15 128GB",
+      "quantity": 2,
+      "unitPrice": 73440,
+      "costPrice": 68000,
+      "gstPercent": 18,
+      "gstAmount": 26438.4,
+      "discountPercent": 0,
+      "discountAmount": 0,
+      "totalAmount": 173318.4,
+      "profit": 10880
     }
   ]
 }
