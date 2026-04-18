@@ -12,6 +12,7 @@ export const productsTable = sqliteTable("products", {
   stock: integer("stock").notNull().default(0),
   hsn: text("hsn"),
   unit: text("unit").default("pcs"),
+  alias: text("alias"),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
 });
 

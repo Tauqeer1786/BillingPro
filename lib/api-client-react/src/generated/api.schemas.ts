@@ -19,6 +19,7 @@ export interface Product {
   stock: number;
   hsn?: string;
   unit?: string;
+  alias?: string;
   createdAt: string;
 }
 
@@ -30,6 +31,7 @@ export interface CreateProductBody {
   stock: number;
   hsn?: string;
   unit?: string;
+  alias?: string;
 }
 
 export interface UpdateProductBody {
@@ -40,6 +42,7 @@ export interface UpdateProductBody {
   stock?: number;
   hsn?: string;
   unit?: string;
+  alias?: string;
 }
 
 export interface ProductListResponse {

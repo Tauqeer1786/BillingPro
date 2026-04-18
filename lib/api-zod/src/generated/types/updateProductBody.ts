@@ -14,4 +14,5 @@ export interface UpdateProductBody {
   stock?: number;
   hsn?: string;
   unit?: string;
+  alias?: string;
 }

@@ -59,6 +59,7 @@ export const CreateProductBody = zod.object({
   stock: zod.number(),
   hsn: zod.string().optional(),
   unit: zod.string().default(createProductBodyUnitDefault),
+  alias: zod.string().optional(),
 });
 
 /**
@@ -96,6 +97,7 @@ export const UpdateProductBody = zod.object({
   stock: zod.number().optional(),
   hsn: zod.string().optional(),
   unit: zod.string().optional(),
+  alias: zod.string().optional(),
 });
 
 export const UpdateProductResponse = zod.object({

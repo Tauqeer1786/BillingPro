@@ -15,6 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 interface ProductForm {
   name: string;
+  alias: string;
   costPrice: string;
   marginPercent: string;
   gstPercent: string;
@@ -23,7 +24,7 @@ interface ProductForm {
   unit: string;
 }
 
-const emptyForm: ProductForm = { name: "", costPrice: "", marginPercent: "", gstPercent: "18", stock: "0", hsn: "", unit: "pcs" };
+const emptyForm: ProductForm = { name: "", alias: "", costPrice: "", marginPercent: "", gstPercent: "18", stock: "0", hsn: "", unit: "pcs" };
 
 export function Products() {
   const [, navigate] = useLocation();
@@ -52,6 +53,7 @@ export function Products() {
   function openEdit(product: NonNullable<typeof data>["products"][0]) {
     setForm({
       name: product.name,
+      alias: product.alias || "",
       costPrice: String(product.costPrice),
       marginPercent: String(product.marginPercent),
       gstPercent: String(product.gstPercent),
@@ -67,6 +69,7 @@ export function Products() {
     e.preventDefault();
     const payload = {
       name: form.name,
+      alias: form.alias.trim() || undefined,
       costPrice: parseFloat(form.costPrice),
       marginPercent: parseFloat(form.marginPercent),
       gstPercent: parseFloat(form.gstPercent),
@@ -124,6 +127,7 @@ export function Products() {
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>
+                <TableHead>Alias</TableHead>
                 <TableHead className="text-right">Cost Price</TableHead>
                 <TableHead className="text-right">Margin %</TableHead>
                 <TableHead className="text-right">Selling Price</TableHead>
@@ -136,17 +140,18 @@ export function Products() {
               {isLoading ? (
                 Array.from({ length: 3 }).map((_, i) => (
                   <TableRow key={i}>
-                    {Array.from({ length: 7 }).map((_, j) => (
+                    {Array.from({ length: 8 }).map((_, j) => (
                       <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>
                     ))}
                   </TableRow>
                 ))
               ) : data?.products.length === 0 ? (
-                <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">No products found. Add your first product to get started.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">No products found. Add your first product to get started.</TableCell></TableRow>
               ) : (
                 data?.products.map((product) => (
                   <TableRow key={product.id}>
                     <TableCell className="font-medium">{product.name}</TableCell>
+                    <TableCell className="text-muted-foreground text-sm font-mono">{product.alias || "—"}</TableCell>
                     <TableCell className="text-right">{formatCurrency(product.costPrice)}</TableCell>
                     <TableCell className="text-right">{product.marginPercent}%</TableCell>
                     <TableCell className="text-right font-semibold">{formatCurrency(product.sellingPrice)}</TableCell>
@@ -175,6 +180,14 @@ export function Products() {
             <div>
               <Label>Product Name</Label>
               <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
+            </div>
+            <div>
+              <Label>Alias <span className="text-muted-foreground font-normal text-xs">(short code for quick typing)</span></Label>
+              <Input
+                value={form.alias}
+                onChange={(e) => setForm({ ...form, alias: e.target.value })}
+                placeholder="e.g. samsung-tv, wd40, hp-ink"
+              />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>

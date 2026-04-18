@@ -46,13 +46,23 @@ function ProductAutocomplete({
   const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
   const containerRef = useRef<HTMLDivElement>(null);
   const query = value.trim().toLowerCase();
-  const canShowSuggestions = query.length >= 2;
+  const canShowSuggestions = query.length >= 1;
   const selectedProduct = products.find((product) => product.id === selectedProductId);
   const suggestions = products
     .filter((product) => {
       if (!canShowSuggestions) return false;
       const name = product.name.toLowerCase();
-      return name.startsWith(query) || name.includes(query);
+      const alias = (product.alias || "").toLowerCase();
+      return alias === query || alias.startsWith(query) || name.startsWith(query) || name.includes(query) || alias.includes(query);
+    })
+    .sort((a, b) => {
+      const aAlias = (a.alias || "").toLowerCase();
+      const bAlias = (b.alias || "").toLowerCase();
+      if (aAlias === query) return -1;
+      if (bAlias === query) return 1;
+      if (aAlias.startsWith(query)) return -1;
+      if (bAlias.startsWith(query)) return 1;
+      return 0;
     })
     .slice(0, 8);
 
@@ -88,7 +98,7 @@ function ProductAutocomplete({
         onChange={(event) => {
           const nextValue = event.target.value;
           onInputChange(nextValue);
-          setOpen(nextValue.trim().length >= 2);
+          setOpen(nextValue.trim().length >= 1);
           setActiveIndex(0);
         }}
         onKeyDown={(event) => {
@@ -136,7 +146,12 @@ function ProductAutocomplete({
                 onMouseDown={(event) => event.preventDefault()}
                 onClick={() => selectProduct(product)}
               >
-                <span className="truncate font-medium">{product.name}</span>
+                <span className="flex items-center gap-1.5 min-w-0">
+                  <span className="truncate font-medium">{product.name}</span>
+                  {product.alias && (
+                    <span className="shrink-0 rounded bg-muted px-1 py-0.5 text-[10px] font-mono text-muted-foreground">{product.alias}</span>
+                  )}
+                </span>
                 <span className="shrink-0 text-xs text-muted-foreground">Stock: {product.stock} {product.unit || "pcs"}</span>
               </button>
             ))

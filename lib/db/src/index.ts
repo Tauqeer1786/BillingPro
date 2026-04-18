@@ -87,6 +87,11 @@ export function initializeDb() {
     WHERE payment_status = 'paid' AND amount_paid = 0 AND grand_total > 0
   `);
 
+  const productColumns = sqlite.prepare("PRAGMA table_info(products)").all() as Array<{ name: string }>;
+  if (!productColumns.some(column => column.name === "alias")) {
+    sqlite.exec("ALTER TABLE products ADD COLUMN alias TEXT");
+  }
+
   sqlite.exec(`
     CREATE TABLE IF NOT EXISTS purchases (
       id INTEGER PRIMARY KEY AUTOINCREMENT,

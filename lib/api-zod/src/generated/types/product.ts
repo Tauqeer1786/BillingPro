@@ -16,5 +16,6 @@ export interface Product {
   stock: number;
   hsn?: string;
   unit?: string;
+  alias?: string;
   createdAt: string;
 }

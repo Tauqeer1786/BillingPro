@@ -14,4 +14,5 @@ export interface CreateProductBody {
   stock: number;
   hsn?: string;
   unit?: string;
+  alias?: string;
 }

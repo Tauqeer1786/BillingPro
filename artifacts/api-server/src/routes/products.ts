@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, like, sql, desc } from "drizzle-orm";
+import { eq, like, or, sql, desc } from "drizzle-orm";
 import { db, productsTable } from "@workspace/db";
 import {
   ListProductsQueryParams,
@@ -26,7 +26,10 @@ router.get("/products", async (req, res): Promise<void> => {
   let countQuery = db.select({ count: sql<number>`count(*)` }).from(productsTable);
 
   if (search) {
-    const searchCondition = like(productsTable.name, `%${search}%`);
+    const searchCondition = or(
+      like(productsTable.name, `%${search}%`),
+      like(productsTable.alias, `%${search}%`),
+    );
     query = query.where(searchCondition) as typeof query;
     countQuery = countQuery.where(searchCondition) as typeof countQuery;
   }
@@ -47,6 +50,7 @@ router.get("/products", async (req, res): Promise<void> => {
       stock: p.stock,
       hsn: p.hsn,
       unit: p.unit,
+      alias: p.alias,
       createdAt: p.createdAt.toISOString(),
     })),
     total: Number(total),
@@ -93,6 +97,7 @@ router.get("/products/:id", async (req, res): Promise<void> => {
 
   res.json({
     ...product,
+    alias: product.alias,
     createdAt: product.createdAt.toISOString(),
   });
 });
