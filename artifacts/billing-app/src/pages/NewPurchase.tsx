@@ -284,6 +284,7 @@ export function NewPurchase() {
   const [items, setItems] = useState<PurchaseItem[]>([emptyItem(), emptyItem(), emptyItem()]);
 
   const qtyRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const costPriceRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const productRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   const createMutation = useMutation({
@@ -326,6 +327,14 @@ export function NewPurchase() {
   }
 
   function handleEnterOnProduct(key: string) {
+    qtyRefs.current[key]?.focus();
+  }
+
+  function handleEnterOnQty(key: string) {
+    costPriceRefs.current[key]?.focus();
+  }
+
+  function handleEnterOnCostPrice(key: string) {
     const idx = items.findIndex(i => i.key === key);
     if (idx < items.length - 1) {
       productRefs.current[items[idx + 1].key]?.focus();
@@ -463,10 +472,12 @@ export function NewPurchase() {
                           placeholder="0"
                           value={item.quantity}
                           onChange={e => updateItem(item.key, { quantity: e.target.value })}
+                          onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); handleEnterOnQty(item.key); } }}
                         />
                       </td>
                       <td className="py-2 pr-3">
                         <Input
+                          ref={el => { costPriceRefs.current[item.key] = el; }}
                           type="number"
                           min="0"
                           step="0.01"
@@ -474,6 +485,7 @@ export function NewPurchase() {
                           placeholder="0.00"
                           value={item.costPrice}
                           onChange={e => updateItem(item.key, { costPrice: e.target.value })}
+                          onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); handleEnterOnCostPrice(item.key); } }}
                         />
                       </td>
                       <td className="py-2 pr-3 text-right font-medium tabular-nums">
