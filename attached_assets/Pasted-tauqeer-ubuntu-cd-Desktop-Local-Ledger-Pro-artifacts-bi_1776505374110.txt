@@ -1,0 +1,20 @@
+tauqeer@ubuntu:~$ cd Desktop/Local-Ledger-Pro/artifacts/billing-app/
+tauqeer@ubuntu:~/Desktop/Local-Ledger-Pro/artifacts/billing-app$ pnpm dev
+
+> @workspace/billing-app@0.0.0 dev /home/tauqeer/Desktop/Local-Ledger-Pro/artifacts/billing-app
+> vite --config vite.config.ts --host 0.0.0.0
+
+failed to load config from /home/tauqeer/Desktop/Local-Ledger-Pro/artifacts/billing-app/vite.config.ts
+error when starting dev server:
+Error: PORT environment variable is required but was not provided.
+    at file:///home/tauqeer/Desktop/Local-Ledger-Pro/artifacts/billing-app/node_modules/.vite-temp/vite.config.ts.timestamp-1776505300086-f9ed89d303c0b.mjs:10:9
+    at ModuleJob.run (node:internal/modules/esm/module_job:430:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:661:26)
+    at async loadConfigFromBundledFile (file:///home/tauqeer/Desktop/Local-Ledger-Pro/node_modules/.pnpm/vite@7.3.1_@types+node@25.3.5_jiti@2.6.1_lightningcss@1.31.1_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/config.js:35909:12)
+    at async bundleAndLoadConfigFile (file:///home/tauqeer/Desktop/Local-Ledger-Pro/node_modules/.pnpm/vite@7.3.1_@types+node@25.3.5_jiti@2.6.1_lightningcss@1.31.1_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/config.js:35797:17)
+    at async loadConfigFromFile (file:///home/tauqeer/Desktop/Local-Ledger-Pro/node_modules/.pnpm/vite@7.3.1_@types+node@25.3.5_jiti@2.6.1_lightningcss@1.31.1_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/config.js:35764:42)
+    at async resolveConfig (file:///home/tauqeer/Desktop/Local-Ledger-Pro/node_modules/.pnpm/vite@7.3.1_@types+node@25.3.5_jiti@2.6.1_lightningcss@1.31.1_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/config.js:35413:22)
+    at async _createServer (file:///home/tauqeer/Desktop/Local-Ledger-Pro/node_modules/.pnpm/vite@7.3.1_@types+node@25.3.5_jiti@2.6.1_lightningcss@1.31.1_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/chunks/config.js:25362:67)
+    at async CAC.<anonymous> (file:///home/tauqeer/Desktop/Local-Ledger-Pro/node_modules/.pnpm/vite@7.3.1_@types+node@25.3.5_jiti@2.6.1_lightningcss@1.31.1_tsx@4.21.0_yaml@2.8.2/node_modules/vite/dist/node/cli.js:572:18)
+ ELIFECYCLE  Command failed with exit code 1.
+tauqeer@ubuntu:~/Desktop/Local-Ledger-Pro/artifacts/billing-app$ 
