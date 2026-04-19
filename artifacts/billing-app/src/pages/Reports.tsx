@@ -201,12 +201,38 @@ export function Reports() {
   const [srStartDate, setSrStartDate] = useState(new Date().toISOString().split("T")[0]);
   const [srEndDate, setSrEndDate] = useState(new Date().toISOString().split("T")[0]);
 
+  const todayStr = new Date().toISOString().split("T")[0];
+  const [psPeriod, setPsPeriod] = useState<"today" | "week" | "month" | "year" | "custom">("month");
+  const [psCustomStart, setPsCustomStart] = useState(todayStr);
+  const [psCustomEnd, setPsCustomEnd] = useState(todayStr);
+
+  function getPsDateRange(): { start: string; end: string } {
+    const now = new Date();
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const fmt = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    if (psPeriod === "today") return { start: fmt(now), end: fmt(now) };
+    if (psPeriod === "week") {
+      const day = now.getDay();
+      const mon = new Date(now); mon.setDate(now.getDate() - ((day + 6) % 7));
+      return { start: fmt(mon), end: fmt(now) };
+    }
+    if (psPeriod === "month") {
+      return { start: `${now.getFullYear()}-${pad(now.getMonth() + 1)}-01`, end: fmt(now) };
+    }
+    if (psPeriod === "year") {
+      return { start: `${now.getFullYear()}-01-01`, end: fmt(now) };
+    }
+    return { start: psCustomStart, end: psCustomEnd };
+  }
+  const { start: psStart, end: psEnd } = getPsDateRange();
+
   const { data: financialYears } = useListFinancialYears();
   const { data: salesReport } = useGetSalesReport({ startDate, endDate, groupBy });
   const { data: gstReport } = useGetGstReport({ financialYear: selectedFY });
   const { data: profitReport } = useGetProfitReport({ startDate, endDate, groupBy });
   const { data: productWise } = useGetProductWiseReport({ startDate, endDate });
   const { data: customerWise } = useGetCustomerWiseReport({ startDate, endDate });
+  const { data: psSummary } = useGetProductWiseReport({ startDate: psStart, endDate: psEnd });
 
   function handleFYChange(fy: string) {
     setSelectedFY(fy);
@@ -246,6 +272,7 @@ export function Reports() {
             <TabsTrigger value="products">Product-wise</TabsTrigger>
             <TabsTrigger value="customers">Customer-wise</TabsTrigger>
             <TabsTrigger value="sales-register">Sales Register</TabsTrigger>
+            <TabsTrigger value="product-summary">Product Summary</TabsTrigger>
           </TabsList>
 
           <TabsContent value="sales" className="space-y-4">
@@ -497,6 +524,103 @@ export function Reports() {
                   onStartChange={setSrStartDate}
                   onEndChange={setSrEndDate}
                 />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="product-summary" className="space-y-4">
+            {/* Period selector */}
+            <Card>
+              <CardContent className="pt-4">
+                <div className="flex flex-wrap gap-2 items-center">
+                  <span className="text-sm font-medium text-muted-foreground mr-1">Period:</span>
+                  {(["today", "week", "month", "year", "custom"] as const).map(p => (
+                    <Button
+                      key={p}
+                      variant={psPeriod === p ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setPsPeriod(p)}
+                    >
+                      {p === "today" ? "Today" : p === "week" ? "This Week" : p === "month" ? "This Month" : p === "year" ? "This Year" : "Custom"}
+                    </Button>
+                  ))}
+                  {psPeriod === "custom" && (
+                    <div className="flex items-center gap-2 ml-2">
+                      <Input type="date" value={psCustomStart} onChange={e => setPsCustomStart(e.target.value)} className="w-38 h-8 text-sm" />
+                      <span className="text-muted-foreground text-sm">to</span>
+                      <Input type="date" value={psCustomEnd} onChange={e => setPsCustomEnd(e.target.value)} className="w-38 h-8 text-sm" />
+                    </div>
+                  )}
+                  {psPeriod !== "custom" && (
+                    <span className="text-xs text-muted-foreground ml-2 border rounded px-2 py-1 bg-muted">
+                      {formatDate(psStart)} – {formatDate(psEnd)}
+                    </span>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Summary cards */}
+            {psSummary && psSummary.length > 0 && (
+              <div className="grid grid-cols-3 gap-4">
+                <Card>
+                  <CardContent className="p-4">
+                    <p className="text-sm text-muted-foreground">Total Products Sold</p>
+                    <p className="text-2xl font-bold">{psSummary.length}</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-4">
+                    <p className="text-sm text-muted-foreground">Total Qty Sold</p>
+                    <p className="text-2xl font-bold">{psSummary.reduce((s, p) => s + p.totalQuantity, 0)}</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-4">
+                    <p className="text-sm text-muted-foreground">Total Revenue</p>
+                    <p className="text-2xl font-bold">{formatCurrency(psSummary.reduce((s, p) => s + p.totalRevenue, 0))}</p>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+
+            {/* Product table */}
+            <Card>
+              <CardContent className="p-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-8 text-center">#</TableHead>
+                      <TableHead>Product</TableHead>
+                      <TableHead className="text-right">Qty Sold</TableHead>
+                      <TableHead className="text-right">Revenue</TableHead>
+                      <TableHead className="text-right">GST</TableHead>
+                      {showProfit && <TableHead className="text-right">Profit</TableHead>}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {!psSummary || psSummary.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={showProfit ? 6 : 5} className="text-center py-12 text-muted-foreground">
+                          No sales data for the selected period.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      [...psSummary]
+                        .sort((a, b) => b.totalQuantity - a.totalQuantity)
+                        .map((p, idx) => (
+                          <TableRow key={p.productId}>
+                            <TableCell className="text-center text-muted-foreground text-sm">{idx + 1}</TableCell>
+                            <TableCell className="font-medium">{p.productName}</TableCell>
+                            <TableCell className="text-right font-semibold">{p.totalQuantity}</TableCell>
+                            <TableCell className="text-right">{formatCurrency(p.totalRevenue)}</TableCell>
+                            <TableCell className="text-right text-muted-foreground">{formatCurrency(p.totalGst || 0)}</TableCell>
+                            {showProfit && <TableCell className="text-right text-emerald-600">{formatCurrency(p.totalProfit)}</TableCell>}
+                          </TableRow>
+                        ))
+                    )}
+                  </TableBody>
+                </Table>
               </CardContent>
             </Card>
           </TabsContent>

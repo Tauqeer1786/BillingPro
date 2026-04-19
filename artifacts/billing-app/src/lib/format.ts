@@ -8,9 +8,6 @@ export function formatCurrency(amount: number) {
 }
 
 export function formatDate(dateString: string) {
-  return new Date(dateString).toLocaleDateString("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
+  const [y, m, d] = dateString.split("T")[0].split("-");
+  return `${d}/${m}/${y}`;
 }
