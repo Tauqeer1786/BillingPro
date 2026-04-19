@@ -20,7 +20,8 @@ import { Label } from "@/components/ui/label";
 import { formatCurrency } from "@/lib/format";
 import { useBusinessProfile } from "@/hooks/use-business-profile";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
-import { Printer } from "lucide-react";
+import { Printer, Download } from "lucide-react";
+import jsPDF from "jspdf";
 
 interface SalesRegisterEntry {
   invoiceNumber: string;
@@ -191,6 +192,7 @@ export function Reports() {
   const now = new Date();
   const currentFYStart = now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1;
   const defaultFY = `${currentFYStart}-${currentFYStart + 1}`;
+  const { profile } = useBusinessProfile();
 
   const [startDate, setStartDate] = useState(`${currentFYStart}-04-01`);
   const [endDate, setEndDate] = useState(`${currentFYStart + 1}-03-31`);
@@ -239,6 +241,173 @@ export function Reports() {
     const [start] = fy.split("-").map(Number);
     setStartDate(`${start}-04-01`);
     setEndDate(`${start + 1}-03-31`);
+  }
+
+  function getPsPeriodLabel() {
+    if (psPeriod === "today") return "Today";
+    if (psPeriod === "week") return "This Week";
+    if (psPeriod === "month") return "This Month";
+    if (psPeriod === "year") return "This Year";
+    return "Custom Range";
+  }
+
+  function handlePsPrint() {
+    if (!psSummary || psSummary.length === 0) return;
+    const safe = (v: unknown) => String(v ?? "");
+    const rows = [...psSummary]
+      .sort((a, b) => b.totalQuantity - a.totalQuantity)
+      .map((p, idx) => `
+        <tr style="background:${idx % 2 === 0 ? "#fff" : "#f9f9f9"}">
+          <td style="border:1px solid #ccc;padding:5px 8px;text-align:center">${idx + 1}</td>
+          <td style="border:1px solid #ccc;padding:5px 8px;font-weight:600">${safe(p.productName)}</td>
+          <td style="border:1px solid #ccc;padding:5px 8px;text-align:right">${p.totalQuantity}</td>
+          <td style="border:1px solid #ccc;padding:5px 8px;text-align:right">${formatCurrency(p.totalRevenue)}</td>
+          <td style="border:1px solid #ccc;padding:5px 8px;text-align:right">${formatCurrency(p.totalGst || 0)}</td>
+          ${showProfit ? `<td style="border:1px solid #ccc;padding:5px 8px;text-align:right;color:#16a34a">${formatCurrency(p.totalProfit)}</td>` : ""}
+        </tr>`).join("");
+    const totalQty = psSummary.reduce((s, p) => s + p.totalQuantity, 0);
+    const totalRev = psSummary.reduce((s, p) => s + p.totalRevenue, 0);
+    const totalGst = psSummary.reduce((s, p) => s + (p.totalGst || 0), 0);
+    const totalProfit = psSummary.reduce((s, p) => s + p.totalProfit, 0);
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Product Summary</title>
+      <style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:Arial,sans-serif;font-size:11px;color:#111;padding:12mm}
+      @page{size:A4;margin:0}@media print{body{padding:12mm}}</style></head><body>
+      <div style="text-align:center;margin-bottom:12px">
+        <div style="font-size:18px;font-weight:900">${safe(profile.name)}</div>
+        ${profile.address ? `<div style="font-size:11px">${safe(profile.address)}</div>` : ""}
+        ${profile.city ? `<div style="font-size:11px">${safe(profile.city)}</div>` : ""}
+        ${profile.gstin ? `<div style="font-size:11px;font-weight:600">GSTIN: ${safe(profile.gstin)}</div>` : ""}
+      </div>
+      <div style="border-top:2px solid #111;border-bottom:2px solid #111;padding:4px 0;text-align:center;margin-bottom:10px">
+        <div style="font-size:13px;font-weight:800">Product Sales Summary — ${getPsPeriodLabel()}</div>
+        <div style="font-size:10px;margin-top:2px">Period: ${formatDate(psStart)} to ${formatDate(psEnd)}</div>
+      </div>
+      <table style="width:100%;border-collapse:collapse;margin-bottom:10px">
+        <thead><tr style="background:#f0f0f0">
+          <th style="border:1px solid #888;padding:5px 8px">#</th>
+          <th style="border:1px solid #888;padding:5px 8px;text-align:left">Product</th>
+          <th style="border:1px solid #888;padding:5px 8px;text-align:right">Qty Sold</th>
+          <th style="border:1px solid #888;padding:5px 8px;text-align:right">Revenue</th>
+          <th style="border:1px solid #888;padding:5px 8px;text-align:right">GST</th>
+          ${showProfit ? `<th style="border:1px solid #888;padding:5px 8px;text-align:right">Profit</th>` : ""}
+        </tr></thead>
+        <tbody>${rows}</tbody>
+        <tfoot><tr style="background:#e8e8e8;font-weight:700">
+          <td colspan="2" style="border:1px solid #888;padding:5px 8px;text-align:right">Total</td>
+          <td style="border:1px solid #888;padding:5px 8px;text-align:right">${totalQty}</td>
+          <td style="border:1px solid #888;padding:5px 8px;text-align:right">${formatCurrency(totalRev)}</td>
+          <td style="border:1px solid #888;padding:5px 8px;text-align:right">${formatCurrency(totalGst)}</td>
+          ${showProfit ? `<td style="border:1px solid #888;padding:5px 8px;text-align:right;color:#16a34a">${formatCurrency(totalProfit)}</td>` : ""}
+        </tr></tfoot>
+      </table>
+      <div style="font-size:10px;color:#555;text-align:right;margin-top:8px">Printed on ${formatDate(new Date().toISOString().split("T")[0])}</div>
+    </body></html>`;
+    const w = window.open("", "_blank", "width=900,height=700");
+    if (!w) return;
+    w.document.write(html);
+    w.document.close();
+    w.focus();
+    setTimeout(() => { w.print(); w.close(); }, 400);
+  }
+
+  function handlePsDownloadPdf() {
+    if (!psSummary || psSummary.length === 0) return;
+    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+    const pageW = doc.internal.pageSize.getWidth();
+    const margin = 12;
+    const cw = pageW - margin * 2;
+    const safe = (v: unknown) => String(v ?? "").replace(/₹/g, "Rs.");
+    let y = margin + 2;
+    const fs = 7;
+    const lineH = 4;
+
+    doc.setDrawColor(34, 34, 34);
+    doc.setLineWidth(0.5);
+    doc.rect(margin - 2, margin - 2, cw + 4, doc.internal.pageSize.getHeight() - margin * 2 + 4);
+
+    const innerL = margin + 2;
+    const innerW = cw - 4;
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(15);
+    doc.text(safe(profile.name), innerL + innerW / 2, y + 5, { align: "center" });
+    y += 8;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(fs);
+    if (profile.address) { doc.text(safe(profile.address), innerL + innerW / 2, y + lineH, { align: "center" }); y += lineH; }
+    if (profile.city) { doc.text(safe(profile.city), innerL + innerW / 2, y + lineH, { align: "center" }); y += lineH; }
+    if (profile.gstin) { doc.setFont("helvetica", "bold"); doc.text("GSTIN: " + safe(profile.gstin), innerL + innerW / 2, y + lineH, { align: "center" }); doc.setFont("helvetica", "normal"); y += lineH; }
+
+    y += 3;
+    doc.setDrawColor(34, 34, 34);
+    doc.setLineWidth(0.4);
+    doc.line(innerL, y, innerL + innerW, y); y += 1;
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.text("Product Sales Summary — " + getPsPeriodLabel(), innerL + innerW / 2, y + 4, { align: "center" });
+    y += 5;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(fs);
+    doc.text("Period: " + formatDate(psStart) + " to " + formatDate(psEnd), innerL + innerW / 2, y + lineH, { align: "center" });
+    y += lineH + 2;
+    doc.line(innerL, y, innerL + innerW, y); y += 3;
+
+    const colW = showProfit
+      ? [8, innerW - 60, 12, 17, 13, 14]
+      : [8, innerW - 47, 12, 17, 13];
+    const headers = showProfit
+      ? ["#", "Product", "Qty", "Revenue", "GST", "Profit"]
+      : ["#", "Product", "Qty", "Revenue", "GST"];
+    const aligns: ("center" | "left" | "right")[] = showProfit
+      ? ["center", "left", "right", "right", "right", "right"]
+      : ["center", "left", "right", "right", "right"];
+
+    const rowH = 5.5;
+    function drawPdfRow(vals: string[], fill?: [number, number, number], bold = false) {
+      if (fill) { doc.setFillColor(...fill); doc.rect(innerL, y, innerW, rowH, "F"); }
+      doc.setDrawColor(136, 136, 136);
+      doc.rect(innerL, y, innerW, rowH);
+      doc.setFont("helvetica", bold ? "bold" : "normal");
+      doc.setFontSize(fs);
+      let cx = innerL;
+      vals.forEach((v, i) => {
+        const tx = aligns[i] === "right" ? cx + colW[i] - 1 : aligns[i] === "center" ? cx + colW[i] / 2 : cx + 1.5;
+        const display = i === 1 ? (doc.splitTextToSize(safe(v), colW[i] - 3)[0] || safe(v)) : safe(v);
+        doc.text(display, tx, y + rowH - 1.5, { align: aligns[i] });
+        cx += colW[i];
+        if (i < vals.length - 1) { doc.setDrawColor(136, 136, 136); doc.line(cx, y, cx, y + rowH); }
+      });
+      y += rowH;
+    }
+
+    drawPdfRow(headers, [240, 240, 240], true);
+
+    const sorted = [...psSummary].sort((a, b) => b.totalQuantity - a.totalQuantity);
+    sorted.forEach((p, idx) => {
+      const row = [
+        String(idx + 1), p.productName, String(p.totalQuantity),
+        safe(formatCurrency(p.totalRevenue)), safe(formatCurrency(p.totalGst || 0)),
+        ...(showProfit ? [safe(formatCurrency(p.totalProfit))] : []),
+      ];
+      drawPdfRow(row, idx % 2 === 1 ? [250, 250, 250] : undefined);
+    });
+
+    const totals = [
+      "Total", "",
+      String(psSummary.reduce((s, p) => s + p.totalQuantity, 0)),
+      safe(formatCurrency(psSummary.reduce((s, p) => s + p.totalRevenue, 0))),
+      safe(formatCurrency(psSummary.reduce((s, p) => s + (p.totalGst || 0), 0))),
+      ...(showProfit ? [safe(formatCurrency(psSummary.reduce((s, p) => s + p.totalProfit, 0)))] : []),
+    ];
+    drawPdfRow(totals, [230, 230, 230], true);
+
+    y += 3;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(fs - 1);
+    doc.setTextColor(120, 120, 120);
+    doc.text("Printed on " + formatDate(new Date().toISOString().split("T")[0]), innerL + innerW, y + lineH, { align: "right" });
+
+    doc.save(`product-summary-${psStart}-${psEnd}.pdf`);
   }
 
   return (
@@ -529,9 +698,10 @@ export function Reports() {
           </TabsContent>
 
           <TabsContent value="product-summary" className="space-y-4">
-            {/* Period selector */}
+            {/* Period selector + action buttons */}
             <Card>
               <CardContent className="pt-4">
+                <div className="flex flex-wrap gap-2 items-center justify-between">
                 <div className="flex flex-wrap gap-2 items-center">
                   <span className="text-sm font-medium text-muted-foreground mr-1">Period:</span>
                   {(["today", "week", "month", "year", "custom"] as const).map(p => (
@@ -556,6 +726,27 @@ export function Reports() {
                       {formatDate(psStart)} – {formatDate(psEnd)}
                     </span>
                   )}
+                </div>
+                <div className="flex gap-2 shrink-0">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handlePsPrint}
+                    disabled={!psSummary || psSummary.length === 0}
+                  >
+                    <Printer className="w-4 h-4 mr-1" />
+                    Print
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handlePsDownloadPdf}
+                    disabled={!psSummary || psSummary.length === 0}
+                  >
+                    <Download className="w-4 h-4 mr-1" />
+                    PDF
+                  </Button>
+                </div>
                 </div>
               </CardContent>
             </Card>
