@@ -141,6 +141,7 @@ function buildInvoiceHtmlBody(invoice: InvoiceFull, profile: BusinessProfile): s
         </div>
       </div>
       ${profile.gstin ? `<div style="font-size:${fs};margin-top:4px;font-weight:600">GST NO: ${profile.gstin}</div>` : ""}
+      ${profile.fssaiNumber ? `<div style="font-size:${fs};margin-top:2px;font-weight:600">FSSAI: ${profile.fssaiNumber}</div>` : ""}
     </div>
 
     <div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:1px solid #bbb;padding-bottom:5px;margin-bottom:5px">
@@ -193,6 +194,7 @@ function buildInvoiceHtmlBody(invoice: InvoiceFull, profile: BusinessProfile): s
         ${profile.bankAccount ? `<div><strong>SBI A/C NO:</strong> ${profile.bankAccount}${profile.bankIfsc ? `&nbsp;&nbsp;<strong>IFSC CODE:</strong> ${profile.bankIfsc}` : ""}</div>` : ""}
         ${profile.bankName && !profile.bankAccount ? `<div><strong>Bank:</strong> ${profile.bankName}</div>` : ""}
         ${profile.gstin ? `<div style="margin-top:3px"><strong>GST NO:</strong> ${profile.gstin}</div>` : ""}
+        ${profile.fssaiNumber ? `<div style="margin-top:2px"><strong>FSSAI:</strong> ${profile.fssaiNumber}</div>` : ""}
         ${profile.termsAndConditions ? `<div style="margin-top:4px;color:#555">${profile.termsAndConditions}</div>` : ""}
       </div>
       <div style="min-width:${isA5 ? "180px" : "210px"}">
