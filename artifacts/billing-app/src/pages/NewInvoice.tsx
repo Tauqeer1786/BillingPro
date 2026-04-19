@@ -5,6 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DateInput } from "@/components/ui/date-input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -449,7 +450,7 @@ export function NewInvoice() {
         </div>
         <div>
           <Label>Date</Label>
-          <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+          <DateInput value={date} onChange={setDate} />
         </div>
         <div>
           <Label>Payment Mode</Label>

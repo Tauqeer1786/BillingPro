@@ -12,6 +12,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DateInput } from "@/components/ui/date-input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -80,11 +81,11 @@ function SalesRegisterReport({
       <div className="flex flex-wrap gap-4 items-end mb-6 no-print">
         <div>
           <label className="text-sm font-medium text-muted-foreground">From Date</label>
-          <Input type="date" value={startDate} onChange={(e) => onStartChange(e.target.value)} className="w-40" />
+          <DateInput value={startDate} onChange={onStartChange} className="w-40" />
         </div>
         <div>
           <label className="text-sm font-medium text-muted-foreground">To Date</label>
-          <Input type="date" value={endDate} onChange={(e) => onEndChange(e.target.value)} className="w-40" />
+          <DateInput value={endDate} onChange={onEndChange} className="w-40" />
         </div>
         <Button onClick={handlePrint} variant="outline" className="gap-2">
           <Printer className="w-4 h-4" />
@@ -257,8 +258,8 @@ export function Reports() {
   function getPsPeriodLabel() {
     if (psPeriod === "today") return "Today";
     if (psPeriod === "week") return "This Week";
-    if (psPeriod === "month") return "This Month";
-    if (psPeriod === "year") return "This Year";
+    if (psPeriod === "month") return MONTHS[psMonth - 1] + " " + new Date().getFullYear();
+    if (psPeriod === "year") return String(psYear);
     return "Custom Range";
   }
 
@@ -475,11 +476,11 @@ export function Reports() {
               </div>
               <div>
                 <label className="text-sm font-medium text-muted-foreground">From</label>
-                <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-40" />
+                <DateInput value={startDate} onChange={setStartDate} className="w-40" />
               </div>
               <div>
                 <label className="text-sm font-medium text-muted-foreground">To</label>
-                <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-40" />
+                <DateInput value={endDate} onChange={setEndDate} className="w-40" />
               </div>
               <div>
                 <label className="text-sm font-medium text-muted-foreground">Group By</label>
@@ -751,9 +752,9 @@ export function Reports() {
                   )}
                   {psPeriod === "custom" && (
                     <div className="flex items-center gap-2 ml-2">
-                      <Input type="date" value={psCustomStart} onChange={e => setPsCustomStart(e.target.value)} className="w-38 h-8 text-sm" />
+                      <DateInput value={psCustomStart} onChange={setPsCustomStart} className="w-38 h-8 text-sm" />
                       <span className="text-muted-foreground text-sm">to</span>
-                      <Input type="date" value={psCustomEnd} onChange={e => setPsCustomEnd(e.target.value)} className="w-38 h-8 text-sm" />
+                      <DateInput value={psCustomEnd} onChange={setPsCustomEnd} className="w-38 h-8 text-sm" />
                     </div>
                   )}
                   {psPeriod !== "custom" && (

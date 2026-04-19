@@ -4,6 +4,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DateInput } from "@/components/ui/date-input";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -399,11 +400,11 @@ export function Invoices() {
         </div>
         <div>
           <label className="text-sm font-medium text-muted-foreground">From</label>
-          <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-40" />
+          <DateInput value={startDate} onChange={setStartDate} className="w-40" />
         </div>
         <div>
           <label className="text-sm font-medium text-muted-foreground">To</label>
-          <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-40" />
+          <DateInput value={endDate} onChange={setEndDate} className="w-40" />
         </div>
         <div>
           <label className="text-sm font-medium text-muted-foreground">Status</label>

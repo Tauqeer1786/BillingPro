@@ -5,6 +5,7 @@ import { customFetch } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DateInput } from "@/components/ui/date-input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
@@ -436,7 +437,7 @@ export function NewPurchase() {
             </div>
             <div className="space-y-1.5">
               <Label>Purchase Date <span className="text-destructive">*</span></Label>
-              <Input type="date" value={date} onChange={e => setDate(e.target.value)} required />
+              <DateInput value={date} onChange={setDate} required />
             </div>
             <div className="space-y-1.5 sm:col-span-2">
               <Label>Notes (optional)</Label>
