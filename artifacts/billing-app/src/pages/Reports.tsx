@@ -207,6 +207,11 @@ export function Reports() {
   const [psPeriod, setPsPeriod] = useState<"today" | "week" | "month" | "year" | "custom">("month");
   const [psCustomStart, setPsCustomStart] = useState(todayStr);
   const [psCustomEnd, setPsCustomEnd] = useState(todayStr);
+  const [psMonth, setPsMonth] = useState(new Date().getMonth() + 1);
+  const [psYear, setPsYear] = useState(new Date().getFullYear());
+
+  const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+  const YEARS = Array.from({ length: 6 }, (_, i) => new Date().getFullYear() - 2 + i);
 
   function getPsDateRange(): { start: string; end: string } {
     const now = new Date();
@@ -219,10 +224,16 @@ export function Reports() {
       return { start: fmt(mon), end: fmt(now) };
     }
     if (psPeriod === "month") {
-      return { start: `${now.getFullYear()}-${pad(now.getMonth() + 1)}-01`, end: fmt(now) };
+      const y = now.getFullYear();
+      const lastDay = new Date(y, psMonth, 0).getDate();
+      const isCurrentMonth = psMonth === now.getMonth() + 1;
+      const end = isCurrentMonth ? fmt(now) : `${y}-${pad(psMonth)}-${pad(lastDay)}`;
+      return { start: `${y}-${pad(psMonth)}-01`, end };
     }
     if (psPeriod === "year") {
-      return { start: `${now.getFullYear()}-01-01`, end: fmt(now) };
+      const isCurrentYear = psYear === now.getFullYear();
+      const end = isCurrentYear ? fmt(now) : `${psYear}-12-31`;
+      return { start: `${psYear}-01-01`, end };
     }
     return { start: psCustomStart, end: psCustomEnd };
   }
@@ -670,7 +681,7 @@ export function Reports() {
                         <TableCell className="font-medium">{c.customerName}</TableCell>
                         <TableCell className="text-right">{c.invoiceCount}</TableCell>
                         <TableCell className="text-right font-semibold">{formatCurrency(c.totalPurchases)}</TableCell>
-                        <TableCell>{c.lastPurchaseDate || "-"}</TableCell>
+                        <TableCell>{c.lastPurchaseDate ? formatDate(c.lastPurchaseDate) : "-"}</TableCell>
                       </TableRow>
                     )) : (
                       <TableRow><TableCell colSpan={4} className="text-center py-8 text-muted-foreground">No data for selected period.</TableCell></TableRow>
@@ -714,6 +725,30 @@ export function Reports() {
                       {p === "today" ? "Today" : p === "week" ? "This Week" : p === "month" ? "This Month" : p === "year" ? "This Year" : "Custom"}
                     </Button>
                   ))}
+                  {psPeriod === "month" && (
+                    <Select value={String(psMonth)} onValueChange={v => setPsMonth(Number(v))}>
+                      <SelectTrigger className="h-8 text-sm w-36">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {MONTHS.map((m, i) => (
+                          <SelectItem key={i + 1} value={String(i + 1)}>{m}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                  {psPeriod === "year" && (
+                    <Select value={String(psYear)} onValueChange={v => setPsYear(Number(v))}>
+                      <SelectTrigger className="h-8 text-sm w-24">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {YEARS.map(y => (
+                          <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
                   {psPeriod === "custom" && (
                     <div className="flex items-center gap-2 ml-2">
                       <Input type="date" value={psCustomStart} onChange={e => setPsCustomStart(e.target.value)} className="w-38 h-8 text-sm" />
