@@ -364,8 +364,8 @@ export function Reports() {
     doc.line(innerL, y, innerL + innerW, y); y += 3;
 
     const colW = showProfit
-      ? [8, innerW - 60, 12, 17, 13, 14]
-      : [8, innerW - 47, 12, 17, 13];
+      ? [7, innerW - 89, 12, 26, 22, 22]
+      : [7, innerW - 67, 12, 26, 22];
     const headers = showProfit
       ? ["#", "Product", "Qty", "Revenue", "GST", "Profit"]
       : ["#", "Product", "Qty", "Revenue", "GST"];
