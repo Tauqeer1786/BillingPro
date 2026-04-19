@@ -176,10 +176,17 @@ export function InvoiceDetail({ id }: { id: number }) {
       doc.setFontSize(isA5 ? 9 : 11);
       doc.text(safe(profile.phone), innerL, y + (isA5 ? 9 : 11));
     }
+    let headerTextY = y + (isA5 ? 13 : 16);
     if (profile.gstin) {
       doc.setFont("helvetica", "normal");
       doc.setFontSize(fs);
-      doc.text("GST NO: " + safe(profile.gstin), innerL, y + (isA5 ? 13 : 16));
+      doc.text("GST NO: " + safe(profile.gstin), innerL, headerTextY);
+      headerTextY += lineH;
+    }
+    if (profile.fssaiNumber) {
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(fs);
+      doc.text("FSSAI: " + safe(profile.fssaiNumber), innerL, headerTextY);
     }
 
     doc.setFont("helvetica", "normal");
@@ -330,6 +337,12 @@ export function InvoiceDetail({ id }: { id: number }) {
       bankY += lineH + 1;
       doc.setFont("helvetica", "normal");
     }
+    if (profile.fssaiNumber) {
+      doc.setFont("helvetica", "bold");
+      doc.text("FSSAI: " + safe(profile.fssaiNumber), innerL, bankY + lineH);
+      bankY += lineH + 1;
+      doc.setFont("helvetica", "normal");
+    }
 
     const cgst = invoice.totalGst / 2;
     const sgst = invoice.totalGst / 2;
@@ -476,6 +489,9 @@ export function InvoiceDetail({ id }: { id: number }) {
               {profile.gstin && (
                 <div style={{ fontSize: fs, marginTop: "4px", fontWeight: 600 }}>GST NO: {profile.gstin}</div>
               )}
+              {profile.fssaiNumber && (
+                <div style={{ fontSize: fs, marginTop: "2px", fontWeight: 600 }}>FSSAI: {profile.fssaiNumber}</div>
+              )}
             </div>
 
             {/* ── CUSTOMER & BILL INFO ── */}
@@ -554,6 +570,7 @@ export function InvoiceDetail({ id }: { id: number }) {
                 )}
                 {profile.bankName && !profile.bankAccount && <div><strong>Bank:</strong> {profile.bankName}</div>}
                 {profile.gstin && <div style={{ marginTop: "3px" }}><strong>GST NO:</strong> {profile.gstin}</div>}
+                {profile.fssaiNumber && <div style={{ marginTop: "2px" }}><strong>FSSAI:</strong> {profile.fssaiNumber}</div>}
                 {profile.termsAndConditions && (
                   <div style={{ marginTop: "4px", color: "#555" }}>{profile.termsAndConditions}</div>
                 )}
