@@ -7,6 +7,7 @@ export interface BusinessProfile {
   phone: string;
   email: string;
   gstin: string;
+  fssaiNumber: string;
   bankName: string;
   bankAccount: string;
   bankIfsc: string;
@@ -22,6 +23,7 @@ const DEFAULT_PROFILE: BusinessProfile = {
   phone: "+91 98110 45678",
   email: "sharma.traders@gmail.com",
   gstin: "07AABCS1429B1ZX",
+  fssaiNumber: "",
   bankName: "State Bank of India",
   bankAccount: "32145678901234",
   bankIfsc: "SBIN0001234",

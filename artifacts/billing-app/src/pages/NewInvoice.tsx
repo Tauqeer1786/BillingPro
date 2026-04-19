@@ -24,6 +24,109 @@ interface InvoiceLineItem {
   discountPercent: number;
 }
 
+const WALK_IN_ID = "0";
+const WALK_IN_LABEL = "Walk-in Customer";
+
+function CustomerAutocomplete({
+  customers,
+  value,
+  onChange,
+}: {
+  customers: { id: number; name: string; phone?: string | null }[];
+  value: string;
+  onChange: (id: string) => void;
+}) {
+  const selectedCustomer = value === WALK_IN_ID || value === ""
+    ? null
+    : customers.find(c => String(c.id) === value);
+  const [inputValue, setInputValue] = useState(selectedCustomer?.name ?? WALK_IN_LABEL);
+  const [open, setOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const query = inputValue.trim().toLowerCase();
+  const isWalkIn = query === "" || query === WALK_IN_LABEL.toLowerCase();
+
+  const suggestions = isWalkIn
+    ? [{ id: 0, name: WALK_IN_LABEL, phone: null }, ...customers]
+    : [
+        { id: 0, name: WALK_IN_LABEL, phone: null },
+        ...customers.filter(c => c.name.toLowerCase().includes(query) || (c.phone && c.phone.includes(query))),
+      ];
+
+  useEffect(() => {
+    if (open && containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      setDropdownStyle({
+        position: "fixed",
+        top: rect.bottom + 4,
+        left: rect.left,
+        width: rect.width,
+        zIndex: 9999,
+        maxHeight: 240,
+        overflowY: "auto",
+      });
+    }
+  }, [open, inputValue]);
+
+  function selectCustomer(id: number, name: string) {
+    onChange(String(id));
+    setInputValue(id === 0 ? WALK_IN_LABEL : name);
+    setOpen(false);
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "ArrowDown") { e.preventDefault(); setActiveIndex(i => Math.min(i + 1, suggestions.length - 1)); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); setActiveIndex(i => Math.max(i - 1, 0)); }
+    else if (e.key === "Enter" && open) {
+      e.preventDefault();
+      const s = suggestions[activeIndex];
+      if (s) selectCustomer(s.id, s.name);
+    } else if (e.key === "Escape") setOpen(false);
+  }
+
+  return (
+    <div ref={containerRef} className="relative">
+      <Input
+        value={inputValue}
+        placeholder={WALK_IN_LABEL}
+        autoComplete="off"
+        onFocus={() => { setOpen(true); setActiveIndex(0); }}
+        onBlur={() => {
+          setTimeout(() => {
+            setOpen(false);
+            if (!inputValue.trim()) { onChange(WALK_IN_ID); setInputValue(WALK_IN_LABEL); }
+          }, 120);
+        }}
+        onChange={e => {
+          setInputValue(e.target.value);
+          setOpen(true);
+          setActiveIndex(0);
+        }}
+        onKeyDown={handleKeyDown}
+      />
+      {open && createPortal(
+        <div style={dropdownStyle} className="overflow-hidden rounded-md border bg-popover shadow-md">
+          {suggestions.map((c, index) => (
+            <button
+              key={c.id}
+              type="button"
+              className={`flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm hover:bg-accent hover:text-accent-foreground ${index === activeIndex ? "bg-accent text-accent-foreground" : ""}`}
+              onMouseDown={e => e.preventDefault()}
+              onClick={() => selectCustomer(c.id, c.name)}
+            >
+              <span className="truncate font-medium">{c.name}</span>
+              {c.phone && <span className="shrink-0 text-xs text-muted-foreground">{c.phone}</span>}
+            </button>
+          ))}
+        </div>,
+        document.body
+      )}
+    </div>
+  );
+}
+
 function ProductAutocomplete({
   products,
   value,
@@ -338,17 +441,11 @@ export function NewInvoice() {
       <div className="grid md:grid-cols-4 gap-4">
         <div>
           <Label>Customer</Label>
-          <Select value={customerId} onValueChange={setCustomerId}>
-            <SelectTrigger>
-              <SelectValue placeholder="Walk-in customer" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="0">Walk-in customer</SelectItem>
-              {customers.map((c) => (
-                <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <CustomerAutocomplete
+            customers={customers}
+            value={customerId || WALK_IN_ID}
+            onChange={setCustomerId}
+          />
         </div>
         <div>
           <Label>Date</Label>

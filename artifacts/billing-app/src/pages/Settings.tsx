@@ -235,6 +235,10 @@ export function Settings() {
               <Input value={localProfile.gstin} onChange={e => setLocalProfile(p => ({ ...p, gstin: e.target.value }))} placeholder="22AAAAA0000A1Z5" />
             </div>
             <div className="space-y-1.5">
+              <Label>FSSAI Number <span className="text-muted-foreground font-normal text-xs">(optional, for food businesses)</span></Label>
+              <Input value={localProfile.fssaiNumber} onChange={e => setLocalProfile(p => ({ ...p, fssaiNumber: e.target.value }))} placeholder="12345678901234" />
+            </div>
+            <div className="space-y-1.5">
               <Label>Address</Label>
               <Input value={localProfile.address} onChange={e => setLocalProfile(p => ({ ...p, address: e.target.value }))} placeholder="Street / Area" />
             </div>
