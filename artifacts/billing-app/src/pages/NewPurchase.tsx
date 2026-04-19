@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 interface ProductOption {
   id: number;
   name: string;
+  alias?: string | null;
   costPrice: number;
   stock: number;
 }
@@ -181,8 +182,24 @@ interface ProductAutocompleteProps {
 function ProductAutocomplete({ value, productId, products, onChange, onTab, onEnter, registerRef }: ProductAutocompleteProps) {
   const { open, pos, activeIdx, setActiveIdx, inputRef, justSelectedRef, openDropdown, closeDropdown } = useDropdown();
 
-  const suggestions = value.length >= 2
-    ? products.filter(p => p.name.toLowerCase().includes(value.toLowerCase())).slice(0, 8)
+  const q = value.toLowerCase();
+  const suggestions = value.length >= 1
+    ? products
+        .filter(p => {
+          const alias = (p.alias || "").toLowerCase();
+          return alias === q || alias.startsWith(q) || alias.includes(q) ||
+                 p.name.toLowerCase().startsWith(q) || p.name.toLowerCase().includes(q);
+        })
+        .sort((a, b) => {
+          const aAlias = (a.alias || "").toLowerCase();
+          const bAlias = (b.alias || "").toLowerCase();
+          if (aAlias === q) return -1;
+          if (bAlias === q) return 1;
+          if (aAlias.startsWith(q)) return -1;
+          if (bAlias.startsWith(q)) return 1;
+          return 0;
+        })
+        .slice(0, 8)
     : [];
 
   const setInputRef = useCallback((el: HTMLInputElement | null) => {
@@ -193,8 +210,12 @@ function ProductAutocomplete({ value, productId, products, onChange, onTab, onEn
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     const v = e.target.value;
     onChange(v, null);
-    if (v.length >= 2) {
-      const m = products.filter(p => p.name.toLowerCase().includes(v.toLowerCase()));
+    if (v.length >= 1) {
+      const vq = v.toLowerCase();
+      const m = products.filter(p => {
+        const alias = (p.alias || "").toLowerCase();
+        return alias.includes(vq) || p.name.toLowerCase().includes(vq);
+      });
       if (m.length > 0) openDropdown(); else closeDropdown();
     } else {
       closeDropdown();
@@ -248,7 +269,12 @@ function ProductAutocomplete({ value, productId, products, onChange, onTab, onEn
               onMouseDown={e => { e.preventDefault(); selectProduct(p); }}
               onMouseEnter={() => setActiveIdx(idx)}
             >
-              <span className="font-medium truncate">{p.name}</span>
+              <span className="flex items-center gap-1.5 min-w-0">
+                <span className="font-medium truncate">{p.name}</span>
+                {p.alias && (
+                  <span className="shrink-0 rounded bg-muted px-1 py-0.5 text-[10px] font-mono text-muted-foreground">{p.alias}</span>
+                )}
+              </span>
               <div className="flex items-center gap-2 shrink-0 text-xs text-muted-foreground">
                 <span>₹{p.costPrice.toLocaleString("en-IN")}</span>
                 <Badge variant={p.stock > 0 ? "secondary" : "outline"} className="text-xs h-4 px-1">
@@ -427,7 +453,7 @@ export function NewPurchase() {
           <CardHeader>
             <CardTitle className="text-base">Items Purchased</CardTitle>
             <p className="text-sm text-muted-foreground">
-              Type 2+ letters to search inventory. Press <kbd className="px-1 py-0.5 text-xs border rounded">Enter</kbd> after each product to jump to the next row.
+              Type a product name or alias to search inventory. Press <kbd className="px-1 py-0.5 text-xs border rounded">Enter</kbd> after each product to jump to the next row.
             </p>
           </CardHeader>
           <CardContent className="space-y-3">
