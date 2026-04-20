@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatCurrency } from "@/lib/format";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil, Trash2, Search, PackagePlus } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, PackagePlus, Tag } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface ProductForm {
@@ -26,12 +26,16 @@ interface ProductForm {
 
 const emptyForm: ProductForm = { name: "", alias: "", costPrice: "", marginPercent: "", gstPercent: "18", stock: "0", hsn: "", unit: "pcs" };
 
+type ProductRow = NonNullable<ReturnType<typeof useListProducts>["data"]>["products"][0];
+
 export function Products() {
   const [, navigate] = useLocation();
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<ProductForm>(emptyForm);
+  const [priceProduct, setPriceProduct] = useState<ProductRow | null>(null);
+  const [newSellingPrice, setNewSellingPrice] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -104,6 +108,47 @@ export function Products() {
     }
   }
 
+  function openPriceDialog(product: ProductRow) {
+    setPriceProduct(product);
+    setNewSellingPrice(String(product.sellingPrice));
+  }
+
+  async function handleSellPriceChange() {
+    if (!priceProduct) return;
+    const sp = parseFloat(newSellingPrice);
+    if (isNaN(sp) || sp <= 0) {
+      toast({ title: "Invalid selling price", variant: "destructive" });
+      return;
+    }
+    const cp = priceProduct.costPrice;
+    const newMargin = cp > 0 ? ((sp - cp) / cp) * 100 : 0;
+    try {
+      await updateMutation.mutateAsync({
+        id: priceProduct.id,
+        data: {
+          name: priceProduct.name,
+          alias: priceProduct.alias || undefined,
+          costPrice: cp,
+          marginPercent: parseFloat(newMargin.toFixed(4)),
+          gstPercent: priceProduct.gstPercent,
+          stock: priceProduct.stock,
+          hsn: priceProduct.hsn || undefined,
+          unit: priceProduct.unit || "pcs",
+        },
+      });
+      queryClient.invalidateQueries({ queryKey: getListProductsQueryKey() });
+      toast({ title: "Selling price updated", description: `Margin set to ${newMargin.toFixed(2)}%` });
+      setPriceProduct(null);
+      setNewSellingPrice("");
+    } catch {
+      toast({ title: "Error", description: "Failed to update price", variant: "destructive" });
+    }
+  }
+
+  const derivedMargin = priceProduct && newSellingPrice
+    ? (((parseFloat(newSellingPrice) - priceProduct.costPrice) / priceProduct.costPrice) * 100)
+    : null;
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
@@ -159,6 +204,7 @@ export function Products() {
                     <TableCell className="text-right">{product.stock}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
+                        <Button variant="ghost" size="sm" onClick={() => openPriceDialog(product)} title="Change Selling Price"><Tag className="w-4 h-4" /></Button>
                         <Button variant="ghost" size="sm" onClick={() => openEdit(product)}><Pencil className="w-4 h-4" /></Button>
                         <Button variant="ghost" size="sm" onClick={() => handleDelete(product.id)} className="text-destructive"><Trash2 className="w-4 h-4" /></Button>
                       </div>
@@ -170,6 +216,52 @@ export function Products() {
           </Table>
         </CardContent>
       </Card>
+
+      <Dialog open={!!priceProduct} onOpenChange={open => { if (!open) { setPriceProduct(null); setNewSellingPrice(""); } }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Tag className="w-4 h-4" />
+              Change Selling Price
+            </DialogTitle>
+          </DialogHeader>
+          {priceProduct && (
+            <div className="space-y-4 py-2">
+              <div className="text-sm text-muted-foreground space-y-1">
+                <p><span className="font-medium text-foreground">{priceProduct.name}</span></p>
+                <p>Cost Price: <span className="font-medium">{formatCurrency(priceProduct.costPrice)}</span></p>
+                <p>Current Selling Price: <span className="font-medium">{formatCurrency(priceProduct.sellingPrice)}</span> ({priceProduct.marginPercent}% margin)</p>
+              </div>
+              <div className="space-y-1.5">
+                <Label>New Selling Price</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={newSellingPrice}
+                  onChange={e => setNewSellingPrice(e.target.value)}
+                  placeholder="Enter new selling price"
+                  autoFocus
+                />
+              </div>
+              {derivedMargin !== null && !isNaN(derivedMargin) && (
+                <div className="rounded-md bg-muted px-3 py-2 text-sm">
+                  <span className="text-muted-foreground">New Margin: </span>
+                  <span className={`font-semibold ${derivedMargin < 0 ? "text-destructive" : "text-green-700"}`}>
+                    {derivedMargin.toFixed(2)}%
+                  </span>
+                </div>
+              )}
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => { setPriceProduct(null); setNewSellingPrice(""); }}>Cancel</Button>
+                <Button onClick={handleSellPriceChange} disabled={updateMutation.isPending}>
+                  {updateMutation.isPending ? "Saving..." : "Update Price"}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-lg">

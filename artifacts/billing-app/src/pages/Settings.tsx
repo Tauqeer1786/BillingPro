@@ -353,18 +353,18 @@ export function Settings() {
             <>
               {isAdmin && !isMaster && (
                 <div className="rounded-md bg-blue-50 border border-blue-200 px-3 py-2 text-sm text-blue-700">
-                  As Admin, you can update all business details except Business Name, GST Number, and FSSAI Number — those are restricted to the Master.
+                  As Admin, you can update all business details except Business Name, GST Number, and FSSAI Number — contact the developer to change those.
                 </div>
               )}
               {isSalesman && (
                 <div className="rounded-md bg-muted px-3 py-2 text-sm text-muted-foreground">
-                  Business settings can only be modified by Admin or Master.
+                  Business settings can only be modified by Admin.
                 </div>
               )}
 
               <div className="grid sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <Label>Business Name {!isMasterOnlyEditable() && <span className="text-xs text-muted-foreground">(Master only)</span>}</Label>
+                  <Label>Business Name {!isMaster && <span className="text-xs text-muted-foreground">(Restricted)</span>}</Label>
                   <Input
                     value={localSettings.businessName}
                     onChange={e => set("businessName", e.target.value)}
@@ -373,7 +373,7 @@ export function Settings() {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label>GSTIN {!isMasterOnlyEditable() && <span className="text-xs text-muted-foreground">(Master only)</span>}</Label>
+                  <Label>GSTIN {!isMaster && <span className="text-xs text-muted-foreground">(Restricted)</span>}</Label>
                   <Input
                     value={localSettings.gstin}
                     onChange={e => set("gstin", e.target.value)}
@@ -382,7 +382,7 @@ export function Settings() {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label>FSSAI Number <span className="text-muted-foreground font-normal text-xs">(optional)</span> {!isMasterOnlyEditable() && <span className="text-xs text-muted-foreground">(Master only)</span>}</Label>
+                  <Label>FSSAI Number <span className="text-muted-foreground font-normal text-xs">(optional)</span> {!isMaster && <span className="text-xs text-muted-foreground">(Restricted)</span>}</Label>
                   <Input
                     value={localSettings.fssaiNumber}
                     onChange={e => set("fssaiNumber", e.target.value)}
@@ -510,20 +510,22 @@ export function Settings() {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Key className="w-5 h-5" />
-            Change My Password
-          </CardTitle>
-          <CardDescription>Update your own login password.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Button variant="outline" onClick={() => setShowChangePassword(true)}>
-            Change Password
-          </Button>
-        </CardContent>
-      </Card>
+      {!isSalesman && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Key className="w-5 h-5" />
+              Change My Password
+            </CardTitle>
+            <CardDescription>Update your own login password.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button variant="outline" onClick={() => setShowChangePassword(true)}>
+              Change Password
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       {(isMaster || isAdmin) && (
         <div className="grid md:grid-cols-2 gap-6">

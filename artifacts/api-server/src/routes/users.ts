@@ -65,6 +65,7 @@ router.post("/users", authenticate, requireMaster, async (req, res): Promise<voi
   if (role === "salesman") {
     await db.insert(salesmanPermissionsTable).values({
       userId: newUser.id,
+      canAccessDashboard: false,
       canBill: true,
       canViewReports: false,
       canEditInvoices: false,
@@ -102,6 +103,7 @@ router.put("/users/:id", authenticate, async (req, res): Promise<void> => {
     const { permissions } = req.body;
     if (permissions) {
       await db.update(salesmanPermissionsTable).set({
+        canAccessDashboard: permissions.canAccessDashboard ?? false,
         canBill: permissions.canBill ?? true,
         canViewReports: permissions.canViewReports ?? false,
         canEditInvoices: permissions.canEditInvoices ?? false,

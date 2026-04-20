@@ -13,6 +13,7 @@ export const usersTable = sqliteTable("users", {
 export const salesmanPermissionsTable = sqliteTable("salesman_permissions", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   userId: integer("user_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+  canAccessDashboard: integer("can_access_dashboard", { mode: "boolean" }).notNull().default(false),
   canBill: integer("can_bill", { mode: "boolean" }).notNull().default(true),
   canViewReports: integer("can_view_reports", { mode: "boolean" }).notNull().default(false),
   canEditInvoices: integer("can_edit_invoices", { mode: "boolean" }).notNull().default(false),

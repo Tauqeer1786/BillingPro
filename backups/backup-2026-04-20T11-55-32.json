@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "exportedAt": "2026-04-18T08:50:11.187Z",
+  "exportedAt": "2026-04-20T11:55:32.481Z",
   "autoBackup": true,
   "products": [
     {
@@ -22,7 +22,7 @@
       "marginPercent": 8,
       "sellingPrice": 73440,
       "gstPercent": 18,
-      "stock": 72,
+      "stock": 73,
       "hsn": "85171200",
       "unit": "pcs",
       "createdAt": "2026-04-15T00:10:42.000Z"
@@ -46,7 +46,7 @@
       "marginPercent": 20,
       "sellingPrice": 15000,
       "gstPercent": 18,
-      "stock": 25,
+      "stock": 34,
       "hsn": "84433100",
       "unit": "pcs",
       "createdAt": "2026-04-15T00:10:42.000Z"
@@ -94,7 +94,7 @@
       "marginPercent": 25,
       "sellingPrice": 7500,
       "gstPercent": 18,
-      "stock": 127,
+      "stock": 133,
       "hsn": "85167900",
       "unit": "pcs",
       "createdAt": "2026-04-15T00:10:42.000Z"
@@ -118,7 +118,7 @@
       "marginPercent": 25,
       "sellingPrice": 5,
       "gstPercent": 2.5,
-      "stock": 52,
+      "stock": 1051,
       "hsn": null,
       "unit": "pcs",
       "createdAt": "2026-04-18T00:54:40.000Z"
@@ -474,6 +474,20 @@
       "totalProfit": 10890,
       "notes": null,
       "createdAt": "2026-04-18T01:18:40.000Z"
+    },
+    {
+      "id": 23,
+      "invoiceNumber": "022",
+      "customerId": 2,
+      "date": "2026-04-19",
+      "paymentStatus": "paid",
+      "subtotal": 88445,
+      "totalGst": 15919.33,
+      "totalDiscount": 0,
+      "grandTotal": 104364.33,
+      "totalProfit": 7941,
+      "notes": null,
+      "createdAt": "2026-04-19T01:02:28.000Z"
     }
   ],
   "invoiceItems": [
@@ -1091,6 +1105,51 @@
       "discountAmount": 0,
       "totalAmount": 173318.4,
       "profit": 10880
+    },
+    {
+      "id": 44,
+      "invoiceId": 23,
+      "productId": 4,
+      "productName": "HP LaserJet Pro Printer",
+      "quantity": 1,
+      "unitPrice": 15000,
+      "costPrice": 12500,
+      "gstPercent": 18,
+      "gstAmount": 2700,
+      "discountPercent": 0,
+      "discountAmount": 0,
+      "totalAmount": 17700,
+      "profit": 2500
+    },
+    {
+      "id": 45,
+      "invoiceId": 23,
+      "productId": 12,
+      "productName": "ParleG Biscuit",
+      "quantity": 1,
+      "unitPrice": 5,
+      "costPrice": 4,
+      "gstPercent": 2.5,
+      "gstAmount": 0.13,
+      "discountPercent": 0,
+      "discountAmount": 0,
+      "totalAmount": 5.13,
+      "profit": 1
+    },
+    {
+      "id": 46,
+      "invoiceId": 23,
+      "productId": 2,
+      "productName": "Apple iPhone 15 128GB",
+      "quantity": 1,
+      "unitPrice": 73440,
+      "costPrice": 68000,
+      "gstPercent": 18,
+      "gstAmount": 13219.2,
+      "discountPercent": 0,
+      "discountAmount": 0,
+      "totalAmount": 86659.2,
+      "profit": 5440
     }
   ]
 }

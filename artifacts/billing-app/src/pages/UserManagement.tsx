@@ -16,6 +16,7 @@ import { Users, Plus, Trash2, Key, Settings2, ShieldCheck, UserCog } from "lucid
 interface SalesmanPermissions {
   id: number;
   userId: number;
+  canAccessDashboard: boolean;
   canBill: boolean;
   canViewReports: boolean;
   canEditInvoices: boolean;
@@ -192,6 +193,7 @@ export function UserManagement() {
                   </div>
                   {u.role === "salesman" && u.permissions && (
                     <div className="flex flex-wrap gap-1 mt-1">
+                      {u.permissions.canAccessDashboard && <Badge variant="secondary" className="text-xs">Dashboard</Badge>}
                       {u.permissions.canBill && <Badge variant="secondary" className="text-xs">Billing</Badge>}
                       {u.permissions.canViewReports && <Badge variant="secondary" className="text-xs">Reports</Badge>}
                       {u.permissions.canEditInvoices && <Badge variant="secondary" className="text-xs">Edit Invoices</Badge>}
@@ -313,6 +315,7 @@ export function UserManagement() {
           </DialogHeader>
           <div className="space-y-4 py-2">
             {[
+              { key: "canAccessDashboard", label: "Dashboard Access", desc: "Can view the dashboard overview" },
               { key: "canBill", label: "Billing Access", desc: "Can create and manage invoices" },
               { key: "canViewReports", label: "View Reports", desc: "Can access sales and profit reports" },
               { key: "canEditInvoices", label: "Edit Invoices", desc: "Can edit existing invoices" },

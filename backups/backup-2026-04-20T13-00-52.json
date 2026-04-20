@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "exportedAt": "2026-04-18T15:16:52.424Z",
+  "exportedAt": "2026-04-20T13:00:52.334Z",
   "autoBackup": true,
   "products": [
     {
@@ -22,7 +22,7 @@
       "marginPercent": 8,
       "sellingPrice": 73440,
       "gstPercent": 18,
-      "stock": 74,
+      "stock": 71,
       "hsn": "85171200",
       "unit": "pcs",
       "createdAt": "2026-04-15T00:10:42.000Z"
@@ -46,7 +46,7 @@
       "marginPercent": 20,
       "sellingPrice": 15000,
       "gstPercent": 18,
-      "stock": 25,
+      "stock": 34,
       "hsn": "84433100",
       "unit": "pcs",
       "createdAt": "2026-04-15T00:10:42.000Z"
@@ -118,10 +118,22 @@
       "marginPercent": 25,
       "sellingPrice": 5,
       "gstPercent": 2.5,
-      "stock": 1052,
+      "stock": 51,
       "hsn": null,
       "unit": "pcs",
       "createdAt": "2026-04-18T00:54:40.000Z"
+    },
+    {
+      "id": 13,
+      "name": "ParleG Gold",
+      "costPrice": 8.5,
+      "marginPercent": 17.65,
+      "sellingPrice": 10,
+      "gstPercent": 5,
+      "stock": 1000,
+      "hsn": null,
+      "unit": "pcs",
+      "createdAt": "2026-04-20T12:54:20.000Z"
     }
   ],
   "customers": [
@@ -474,6 +486,48 @@
       "totalProfit": 10890,
       "notes": null,
       "createdAt": "2026-04-18T01:18:40.000Z"
+    },
+    {
+      "id": 23,
+      "invoiceNumber": "022",
+      "customerId": 2,
+      "date": "2026-04-19",
+      "paymentStatus": "paid",
+      "subtotal": 88445,
+      "totalGst": 15919.33,
+      "totalDiscount": 0,
+      "grandTotal": 104364.33,
+      "totalProfit": 7941,
+      "notes": null,
+      "createdAt": "2026-04-19T01:02:28.000Z"
+    },
+    {
+      "id": 24,
+      "invoiceNumber": "023",
+      "customerId": 1,
+      "date": "2026-04-20",
+      "paymentStatus": "paid",
+      "subtotal": 139536,
+      "totalGst": 25116.48,
+      "totalDiscount": 7344,
+      "grandTotal": 164652.48,
+      "totalProfit": 3536,
+      "notes": null,
+      "createdAt": "2026-04-20T12:51:45.000Z"
+    },
+    {
+      "id": 25,
+      "invoiceNumber": "024",
+      "customerId": 2,
+      "date": "2026-04-20",
+      "paymentStatus": "paid",
+      "subtotal": 5000,
+      "totalGst": 125,
+      "totalDiscount": 0,
+      "grandTotal": 5125,
+      "totalProfit": 1000,
+      "notes": null,
+      "createdAt": "2026-04-20T12:52:40.000Z"
     }
   ],
   "invoiceItems": [
@@ -1091,6 +1145,81 @@
       "discountAmount": 0,
       "totalAmount": 173318.4,
       "profit": 10880
+    },
+    {
+      "id": 44,
+      "invoiceId": 23,
+      "productId": 4,
+      "productName": "HP LaserJet Pro Printer",
+      "quantity": 1,
+      "unitPrice": 15000,
+      "costPrice": 12500,
+      "gstPercent": 18,
+      "gstAmount": 2700,
+      "discountPercent": 0,
+      "discountAmount": 0,
+      "totalAmount": 17700,
+      "profit": 2500
+    },
+    {
+      "id": 45,
+      "invoiceId": 23,
+      "productId": 12,
+      "productName": "ParleG Biscuit",
+      "quantity": 1,
+      "unitPrice": 5,
+      "costPrice": 4,
+      "gstPercent": 2.5,
+      "gstAmount": 0.13,
+      "discountPercent": 0,
+      "discountAmount": 0,
+      "totalAmount": 5.13,
+      "profit": 1
+    },
+    {
+      "id": 46,
+      "invoiceId": 23,
+      "productId": 2,
+      "productName": "Apple iPhone 15 128GB",
+      "quantity": 1,
+      "unitPrice": 73440,
+      "costPrice": 68000,
+      "gstPercent": 18,
+      "gstAmount": 13219.2,
+      "discountPercent": 0,
+      "discountAmount": 0,
+      "totalAmount": 86659.2,
+      "profit": 5440
+    },
+    {
+      "id": 47,
+      "invoiceId": 24,
+      "productId": 2,
+      "productName": "Apple iPhone 15 128GB",
+      "quantity": 2,
+      "unitPrice": 73440,
+      "costPrice": 68000,
+      "gstPercent": 18,
+      "gstAmount": 25116.48,
+      "discountPercent": 5,
+      "discountAmount": 7344,
+      "totalAmount": 164652.48,
+      "profit": 3536
+    },
+    {
+      "id": 48,
+      "invoiceId": 25,
+      "productId": 12,
+      "productName": "ParleG Biscuit",
+      "quantity": 1000,
+      "unitPrice": 5,
+      "costPrice": 4,
+      "gstPercent": 2.5,
+      "gstAmount": 125,
+      "discountPercent": 0,
+      "discountAmount": 0,
+      "totalAmount": 5125,
+      "profit": 1000
     }
   ]
 }
