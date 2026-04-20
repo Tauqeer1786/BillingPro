@@ -150,6 +150,8 @@ export function Settings() {
       updates.businessName = localSettings.businessName;
       updates.gstin = localSettings.gstin;
       updates.fssaiNumber = localSettings.fssaiNumber;
+    }
+    if (isMaster || isAdmin) {
       updates.address = localSettings.address;
       updates.city = localSettings.city;
       updates.phone = localSettings.phone;
@@ -160,10 +162,6 @@ export function Settings() {
       updates.termsAndConditions = localSettings.termsAndConditions;
       updates.printPageSize = localSettings.printPageSize;
       updates.fyStartMonth = localSettings.fyStartMonth;
-    } else if (isAdmin) {
-      updates.phone = localSettings.phone;
-      updates.address = localSettings.address;
-      updates.email = localSettings.email;
     }
     saveSettings.mutate(updates);
   }
@@ -180,10 +178,14 @@ export function Settings() {
     setLocalSettings(prev => ({ ...prev, [key]: value }));
   }
 
-  function isFieldEditable(field: "master" | "admin"): boolean {
+  function isMasterOnlyEditable(): boolean {
+    return isMaster && !isLocked;
+  }
+
+  function isAdminEditable(): boolean {
     if (isSalesman) return false;
-    if (field === "master") return isMaster && !isLocked;
-    if (field === "admin") return (isMaster && !isLocked) || isAdmin;
+    if (isAdmin) return true;
+    if (isMaster) return !isLocked;
     return false;
   }
 
@@ -351,7 +353,7 @@ export function Settings() {
             <>
               {isAdmin && !isMaster && (
                 <div className="rounded-md bg-blue-50 border border-blue-200 px-3 py-2 text-sm text-blue-700">
-                  As Admin, you can update Phone, Address, and Email only. Business Name, GST, and FSSAI are managed by the Master.
+                  As Admin, you can update all business details except Business Name, GST Number, and FSSAI Number — those are restricted to the Master.
                 </div>
               )}
               {isSalesman && (
@@ -362,30 +364,30 @@ export function Settings() {
 
               <div className="grid sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <Label>Business Name {!isFieldEditable("master") && <span className="text-xs text-muted-foreground">(Master only)</span>}</Label>
+                  <Label>Business Name {!isMasterOnlyEditable() && <span className="text-xs text-muted-foreground">(Master only)</span>}</Label>
                   <Input
                     value={localSettings.businessName}
                     onChange={e => set("businessName", e.target.value)}
                     placeholder="Your Business Name"
-                    disabled={!isFieldEditable("master")}
+                    disabled={!isMasterOnlyEditable()}
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label>GSTIN {!isFieldEditable("master") && <span className="text-xs text-muted-foreground">(Master only)</span>}</Label>
+                  <Label>GSTIN {!isMasterOnlyEditable() && <span className="text-xs text-muted-foreground">(Master only)</span>}</Label>
                   <Input
                     value={localSettings.gstin}
                     onChange={e => set("gstin", e.target.value)}
                     placeholder="22AAAAA0000A1Z5"
-                    disabled={!isFieldEditable("master")}
+                    disabled={!isMasterOnlyEditable()}
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label>FSSAI Number <span className="text-muted-foreground font-normal text-xs">(optional)</span> {!isFieldEditable("master") && <span className="text-xs text-muted-foreground">(Master only)</span>}</Label>
+                  <Label>FSSAI Number <span className="text-muted-foreground font-normal text-xs">(optional)</span> {!isMasterOnlyEditable() && <span className="text-xs text-muted-foreground">(Master only)</span>}</Label>
                   <Input
                     value={localSettings.fssaiNumber}
                     onChange={e => set("fssaiNumber", e.target.value)}
                     placeholder="12345678901234"
-                    disabled={!isFieldEditable("master")}
+                    disabled={!isMasterOnlyEditable()}
                   />
                 </div>
                 <div className="space-y-1.5">
@@ -394,16 +396,16 @@ export function Settings() {
                     value={localSettings.address}
                     onChange={e => set("address", e.target.value)}
                     placeholder="Street / Area"
-                    disabled={!isFieldEditable("admin")}
+                    disabled={!isAdminEditable()}
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label>City, State - PIN {!isFieldEditable("master") && <span className="text-xs text-muted-foreground">(Master only)</span>}</Label>
+                  <Label>City, State - PIN</Label>
                   <Input
                     value={localSettings.city}
                     onChange={e => set("city", e.target.value)}
                     placeholder="Mumbai, Maharashtra - 400001"
-                    disabled={!isFieldEditable("master")}
+                    disabled={!isAdminEditable()}
                   />
                 </div>
                 <div className="space-y-1.5">
@@ -412,7 +414,7 @@ export function Settings() {
                     value={localSettings.phone}
                     onChange={e => set("phone", e.target.value)}
                     placeholder="+91 98765 43210"
-                    disabled={!isFieldEditable("admin")}
+                    disabled={!isAdminEditable()}
                   />
                 </div>
                 <div className="space-y-1.5">
@@ -421,41 +423,41 @@ export function Settings() {
                     value={localSettings.email}
                     onChange={e => set("email", e.target.value)}
                     placeholder="you@business.com"
-                    disabled={!isFieldEditable("admin")}
+                    disabled={!isAdminEditable()}
                   />
                 </div>
               </div>
 
-              {isMaster && (
+              {(isMaster || isAdmin) && (
                 <>
                   <div className="border-t pt-4">
                     <p className="text-sm font-medium text-muted-foreground mb-3">Bank Details (shown on invoice)</p>
                     <div className="grid sm:grid-cols-3 gap-4">
                       <div className="space-y-1.5">
                         <Label>Bank Name</Label>
-                        <Input value={localSettings.bankName} onChange={e => set("bankName", e.target.value)} placeholder="State Bank of India" disabled={isLocked} />
+                        <Input value={localSettings.bankName} onChange={e => set("bankName", e.target.value)} placeholder="State Bank of India" disabled={!isAdminEditable()} />
                       </div>
                       <div className="space-y-1.5">
                         <Label>Account Number</Label>
-                        <Input value={localSettings.bankAccount} onChange={e => set("bankAccount", e.target.value)} placeholder="1234567890" disabled={isLocked} />
+                        <Input value={localSettings.bankAccount} onChange={e => set("bankAccount", e.target.value)} placeholder="1234567890" disabled={!isAdminEditable()} />
                       </div>
                       <div className="space-y-1.5">
                         <Label>IFSC Code</Label>
-                        <Input value={localSettings.bankIfsc} onChange={e => set("bankIfsc", e.target.value)} placeholder="SBIN0001234" disabled={isLocked} />
+                        <Input value={localSettings.bankIfsc} onChange={e => set("bankIfsc", e.target.value)} placeholder="SBIN0001234" disabled={!isAdminEditable()} />
                       </div>
                     </div>
                   </div>
 
                   <div className="space-y-1.5">
                     <Label>Terms & Conditions</Label>
-                    <Input value={localSettings.termsAndConditions} onChange={e => set("termsAndConditions", e.target.value)} placeholder="Goods once sold will not be taken back." disabled={isLocked} />
+                    <Input value={localSettings.termsAndConditions} onChange={e => set("termsAndConditions", e.target.value)} placeholder="Goods once sold will not be taken back." disabled={!isAdminEditable()} />
                   </div>
 
                   <div className="border-t pt-4">
                     <div className="grid sm:grid-cols-2 gap-4 items-end">
                       <div className="space-y-1.5">
                         <Label>Invoice Print Page Size</Label>
-                        <Select value={localSettings.printPageSize} onValueChange={v => set("printPageSize", v)} disabled={isLocked}>
+                        <Select value={localSettings.printPageSize} onValueChange={v => set("printPageSize", v)} disabled={!isAdminEditable()}>
                           <SelectTrigger><SelectValue /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="A4">A4 - Standard full-page invoice</SelectItem>
@@ -471,7 +473,7 @@ export function Settings() {
                     <div className="grid sm:grid-cols-2 gap-4 items-end">
                       <div className="space-y-1.5">
                         <Label>Financial Year Start Month</Label>
-                        <Select value={String(localSettings.fyStartMonth ?? 4)} onValueChange={v => set("fyStartMonth", v)} disabled={isLocked}>
+                        <Select value={String(localSettings.fyStartMonth ?? 4)} onValueChange={v => set("fyStartMonth", v)} disabled={!isAdminEditable()}>
                           <SelectTrigger><SelectValue /></SelectTrigger>
                           <SelectContent>
                             {[
@@ -498,7 +500,7 @@ export function Settings() {
               )}
 
               {canEditProfile && (
-                <Button onClick={handleSaveProfile} className="w-full sm:w-auto" disabled={saveSettings.isPending || (isMaster && isLocked)}>
+                <Button onClick={handleSaveProfile} className="w-full sm:w-auto" disabled={saveSettings.isPending}>
                   <Save className="w-4 h-4 mr-2" />
                   {saveSettings.isPending ? "Saving..." : "Save Business Profile"}
                 </Button>
@@ -523,7 +525,7 @@ export function Settings() {
         </CardContent>
       </Card>
 
-      {isMaster && (
+      {(isMaster || isAdmin) && (
         <div className="grid md:grid-cols-2 gap-6">
           <Card>
             <CardHeader>
@@ -550,7 +552,7 @@ export function Settings() {
         </div>
       )}
 
-      {isMaster && (
+      {(isMaster || isAdmin) && (
         <Card>
           <CardHeader className="flex flex-row items-start justify-between gap-4">
             <div className="space-y-1">

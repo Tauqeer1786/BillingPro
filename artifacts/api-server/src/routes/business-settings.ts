@@ -7,7 +7,6 @@ import { authenticate, requireMaster, requireAdminOrMaster } from "../middleware
 const router: IRouter = Router();
 
 const MASTER_ONLY_KEYS = ["businessName", "gstin", "fssaiNumber", "settingsLocked"];
-const ADMIN_KEYS = ["phone", "address", "email"];
 
 router.get("/business-settings", authenticate, async (_req, res): Promise<void> => {
   const rows = await db.select().from(businessSettingsTable);
@@ -40,9 +39,9 @@ router.put("/business-settings", authenticate, async (req, res): Promise<void> =
         res.status(403).json({ error: "Business settings are locked" });
         return;
       }
-    } else if (ADMIN_KEYS.includes(key)) {
+    } else {
       if (currentUser.role === "salesman") {
-        res.status(403).json({ error: `Salesmen cannot modify '${key}'` });
+        res.status(403).json({ error: "Salesmen cannot modify business settings" });
         return;
       }
     }

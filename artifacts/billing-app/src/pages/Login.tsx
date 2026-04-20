@@ -89,9 +89,6 @@ export function Login() {
           </CardContent>
         </Card>
 
-        <p className="text-center text-xs text-muted-foreground">
-          Default: username <strong>master</strong> / password <strong>master123</strong>
-        </p>
       </div>
     </div>
   );

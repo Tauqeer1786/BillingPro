@@ -8,7 +8,7 @@ import { authenticate, requireMaster, requireAdminOrMaster } from "../middleware
 const router: IRouter = Router();
 
 router.get("/users", authenticate, requireAdminOrMaster, async (req, res): Promise<void> => {
-  const users = await db.select({
+  const allUsers = await db.select({
     id: usersTable.id,
     username: usersTable.username,
     role: usersTable.role,
@@ -16,6 +16,10 @@ router.get("/users", authenticate, requireAdminOrMaster, async (req, res): Promi
     createdAt: usersTable.createdAt,
     createdBy: usersTable.createdBy,
   }).from(usersTable);
+
+  const users = req.user!.role === "master"
+    ? allUsers.filter(u => u.id !== req.user!.id)
+    : allUsers.filter(u => u.role !== "master");
 
   const perms = await db.select().from(salesmanPermissionsTable);
 

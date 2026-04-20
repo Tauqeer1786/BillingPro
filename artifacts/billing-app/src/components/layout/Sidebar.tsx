@@ -23,11 +23,11 @@ export function Sidebar() {
 
   const navItems = [
     { href: "/", label: "Dashboard", icon: LayoutDashboard, show: true },
-    { href: "/products", label: "Products", icon: Package, show: canAccessInventory },
-    { href: "/purchases", label: "Purchases", icon: ShoppingCart, show: canAccessInventory },
-    { href: "/customers", label: "Customers", icon: Users, show: canBill || isAdmin || isMaster },
-    { href: "/invoices", label: "Invoices", icon: FileText, show: canBill || isAdmin || isMaster },
-    { href: "/reports", label: "Reports", icon: BarChart3, show: canViewReports },
+    { href: "/products", label: "Products", icon: Package, show: isAdmin || isMaster || canAccessInventory },
+    { href: "/purchases", label: "Purchases", icon: ShoppingCart, show: isAdmin || isMaster || canAccessInventory },
+    { href: "/customers", label: "Customers", icon: Users, show: isAdmin || isMaster || canBill },
+    { href: "/invoices", label: "Invoices", icon: FileText, show: isAdmin || isMaster || canBill },
+    { href: "/reports", label: "Reports", icon: BarChart3, show: isAdmin || isMaster || canViewReports },
     { href: "/users", label: "Users", icon: UserCog, show: isMaster || isAdmin },
     { href: "/settings", label: "Settings", icon: Settings, show: true },
   ].filter(item => item.show);
