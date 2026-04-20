@@ -17,6 +17,40 @@ A professional billing web application for small businesses and shops in India. 
 - **API codegen**: Orval (from OpenAPI spec)
 - **Build**: esbuild (CJS bundle)
 
+## Authentication & RBAC
+
+The app has a full Role-Based Access Control (RBAC) system with JWT authentication.
+
+### Roles
+- **Master** (Super Admin): Full control — manages users, business settings (with lock), all reports, all data
+- **Admin**: Can update phone, address, email; reset salesman passwords; assign salesman permissions
+- **Salesman**: Restricted — only what their Admin has allowed (billing, reports, inventory, edit invoices)
+
+### Default Credentials
+- Username: `master` / Password: `master123` (created automatically on first launch)
+
+### Key Auth Details
+- JWT tokens stored in `localStorage`, attached via `setAuthTokenGetter` in api-client-react
+- Token expiry: 7 days
+- Passwords hashed with bcrypt (10 rounds)
+- Business settings now DB-backed (was localStorage) — stored in `business_settings` table
+- Master can lock/unlock all business settings
+- Backend enforces permissions at API route level; frontend hides inaccessible UI
+
+### New Tables
+- **users**: id, username, password_hash, role, is_active, created_at, created_by
+- **salesman_permissions**: per-user flags (can_bill, can_view_reports, can_edit_invoices, can_access_inventory)
+- **business_settings**: key-value store for all business profile fields
+
+### New Routes
+- `POST /api/auth/login` — login (public)
+- `GET /api/auth/me` — get current user
+- `POST /api/auth/change-password` — change own or target user's password
+- `GET/POST/PUT /api/users` — user management (master/admin)
+- `DELETE /api/users/:id` — delete user (master only)
+- `GET/PUT /api/business-settings` — business settings CRUD
+- `POST /api/business-settings/toggle-lock` — lock/unlock settings (master only)
+
 ## Key Features
 
 - **Dashboard**: Total sales, profit, GST, top products/customers, monthly sales chart, recent transactions

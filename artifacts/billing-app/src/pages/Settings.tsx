@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useExportDatabase, useImportDatabase, customFetch } from "@workspace/api-client-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -8,7 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { useBusinessProfile } from "@/hooks/use-business-profile";
+import { useAuth } from "@/contexts/AuthContext";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import {
   Download,
   Upload,
@@ -22,6 +23,9 @@ import {
   Zap,
   Building2,
   Save,
+  Lock,
+  Unlock,
+  Key,
 } from "lucide-react";
 
 interface AutoBackupFile {
@@ -52,61 +56,155 @@ function formatDate(iso: string): string {
   });
 }
 
-function useAutoBackups() {
-  return useQuery<AutoBackupsResponse>({
-    queryKey: ["auto-backups"],
-    queryFn: () => customFetch<AutoBackupsResponse>("/api/backup/auto-backups"),
-    refetchInterval: 30_000,
+const PROFILE_DEFAULTS = {
+  businessName: "",
+  gstin: "",
+  fssaiNumber: "",
+  address: "",
+  city: "",
+  phone: "",
+  email: "",
+  bankName: "",
+  bankAccount: "",
+  bankIfsc: "",
+  termsAndConditions: "",
+  printPageSize: "A4",
+  fyStartMonth: "4",
+};
+
+function useBusinessSettings() {
+  return useQuery<Record<string, string>>({
+    queryKey: ["business-settings"],
+    queryFn: () => customFetch<Record<string, string>>("/api/business-settings"),
   });
 }
 
-function useTriggerBackup() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: () =>
-      customFetch<{ success: boolean; filename: string }>("/api/backup/auto-backups/trigger", {
-        method: "POST",
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["auto-backups"] });
-    },
-  });
-}
-
-function useDeleteBackup() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (filename: string) =>
-      customFetch(`/api/backup/auto-backups/${encodeURIComponent(filename)}`, {
-        method: "DELETE",
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["auto-backups"] });
-    },
+function useBusinessSettingsLock() {
+  return useQuery<{ locked: boolean }>({
+    queryKey: ["business-settings-lock"],
+    queryFn: () => customFetch<{ locked: boolean }>("/api/business-settings/lock-status"),
   });
 }
 
 export function Settings() {
   const { toast } = useToast();
+  const { isMaster, isAdmin, isSalesman } = useAuth();
   const queryClient = useQueryClient();
   const [importing, setImporting] = useState(false);
   const [restoringFile, setRestoringFile] = useState<string | null>(null);
-  const { profile, updateProfile } = useBusinessProfile();
-  const [localProfile, setLocalProfile] = useState(profile);
 
-  function handleProfileSave() {
-    updateProfile(localProfile);
-    toast({ title: "Business profile saved", description: "Your details will appear on all invoices." });
-  }
+  const [showChangePassword, setShowChangePassword] = useState(false);
+  const [currentPass, setCurrentPass] = useState("");
+  const [newPass, setNewPass] = useState("");
+  const [confirmPass, setConfirmPass] = useState("");
 
-  const { refetch: fetchExport, isFetching: isExporting } = useExportDatabase({
-    query: { enabled: false },
+  const { data: remoteSettings, isLoading: isLoadingSettings } = useBusinessSettings();
+  const { data: lockStatus, refetch: refetchLock } = useBusinessSettingsLock();
+  const isLocked = lockStatus?.locked ?? false;
+
+  const [localSettings, setLocalSettings] = useState<Record<string, string>>(PROFILE_DEFAULTS);
+
+  useEffect(() => {
+    if (remoteSettings) {
+      setLocalSettings(s => ({ ...PROFILE_DEFAULTS, ...remoteSettings, ...s }));
+      setLocalSettings({ ...PROFILE_DEFAULTS, ...remoteSettings });
+    }
+  }, [remoteSettings]);
+
+  const saveSettings = useMutation({
+    mutationFn: (data: Record<string, string>) =>
+      customFetch("/api/business-settings", { method: "PUT", body: JSON.stringify(data) }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["business-settings"] });
+      toast({ title: "Business profile saved" });
+    },
+    onError: (err: Error) => toast({ title: "Save failed", description: err.message, variant: "destructive" }),
   });
 
+  const toggleLock = useMutation({
+    mutationFn: () => customFetch("/api/business-settings/toggle-lock", { method: "POST" }),
+    onSuccess: () => {
+      refetchLock();
+      queryClient.invalidateQueries({ queryKey: ["business-settings-lock"] });
+      toast({ title: isLocked ? "Settings unlocked" : "Settings locked" });
+    },
+    onError: (err: Error) => toast({ title: "Failed", description: err.message, variant: "destructive" }),
+  });
+
+  const changePassword = useMutation({
+    mutationFn: ({ currentPassword, newPassword }: { currentPassword: string; newPassword: string }) =>
+      customFetch("/api/auth/change-password", { method: "POST", body: JSON.stringify({ currentPassword, newPassword }) }),
+    onSuccess: () => {
+      setShowChangePassword(false);
+      setCurrentPass("");
+      setNewPass("");
+      setConfirmPass("");
+      toast({ title: "Password changed successfully" });
+    },
+    onError: (err: Error) => toast({ title: "Password change failed", description: err.message, variant: "destructive" }),
+  });
+
+  function handleSaveProfile() {
+    const updates: Record<string, string> = {};
+    if (isMaster) {
+      updates.businessName = localSettings.businessName;
+      updates.gstin = localSettings.gstin;
+      updates.fssaiNumber = localSettings.fssaiNumber;
+      updates.address = localSettings.address;
+      updates.city = localSettings.city;
+      updates.phone = localSettings.phone;
+      updates.email = localSettings.email;
+      updates.bankName = localSettings.bankName;
+      updates.bankAccount = localSettings.bankAccount;
+      updates.bankIfsc = localSettings.bankIfsc;
+      updates.termsAndConditions = localSettings.termsAndConditions;
+      updates.printPageSize = localSettings.printPageSize;
+      updates.fyStartMonth = localSettings.fyStartMonth;
+    } else if (isAdmin) {
+      updates.phone = localSettings.phone;
+      updates.address = localSettings.address;
+      updates.email = localSettings.email;
+    }
+    saveSettings.mutate(updates);
+  }
+
+  function handlePasswordChange() {
+    if (newPass !== confirmPass) {
+      toast({ title: "Passwords don't match", variant: "destructive" });
+      return;
+    }
+    changePassword.mutate({ currentPassword: currentPass, newPassword: newPass });
+  }
+
+  function set(key: string, value: string) {
+    setLocalSettings(prev => ({ ...prev, [key]: value }));
+  }
+
+  function isFieldEditable(field: "master" | "admin"): boolean {
+    if (isSalesman) return false;
+    if (field === "master") return isMaster && !isLocked;
+    if (field === "admin") return (isMaster && !isLocked) || isAdmin;
+    return false;
+  }
+
+  const { refetch: fetchExport, isFetching: isExporting } = useExportDatabase({ query: { enabled: false } });
   const importMutation = useImportDatabase();
-  const { data: autoBackupsData, isLoading: isLoadingBackups, refetch: refetchBackups, isFetching: isRefetchingBackups } = useAutoBackups();
-  const triggerBackup = useTriggerBackup();
-  const deleteBackup = useDeleteBackup();
+
+  const { data: autoBackupsData, isLoading: isLoadingBackups, refetch: refetchBackups, isFetching: isRefetchingBackups } = useQuery<AutoBackupsResponse>({
+    queryKey: ["auto-backups"],
+    queryFn: () => customFetch<AutoBackupsResponse>("/api/backup/auto-backups"),
+    refetchInterval: 30_000,
+  });
+
+  const triggerBackup = useMutation({
+    mutationFn: () => customFetch<{ success: boolean; filename: string }>("/api/backup/auto-backups/trigger", { method: "POST" }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["auto-backups"] }),
+  });
+
+  const deleteBackup = useMutation({
+    mutationFn: (filename: string) => customFetch(`/api/backup/auto-backups/${encodeURIComponent(filename)}`, { method: "DELETE" }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["auto-backups"] }),
+  });
 
   async function handleExport() {
     try {
@@ -121,7 +219,7 @@ export function Settings() {
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
-        toast({ title: "Export successful", description: "Database backup downloaded." });
+        toast({ title: "Export successful" });
       }
     } catch {
       toast({ title: "Export failed", variant: "destructive" });
@@ -135,16 +233,14 @@ export function Settings() {
     input.onchange = async (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (!file) return;
-
-      if (!confirm("This will replace ALL existing data with the imported data. Are you sure?")) return;
-
+      if (!confirm("This will replace ALL existing data. Are you sure?")) return;
       setImporting(true);
       try {
         const text = await file.text();
         const data = JSON.parse(text);
         await importMutation.mutateAsync({ data });
         queryClient.invalidateQueries();
-        toast({ title: "Import successful", description: "Database restored from backup." });
+        toast({ title: "Import successful" });
       } catch {
         toast({ title: "Import failed", description: "Invalid backup file.", variant: "destructive" });
       } finally {
@@ -166,7 +262,7 @@ export function Settings() {
   async function handleDownloadAutoBackup(filename: string) {
     try {
       const response = await fetch(`/api/backup/auto-backups/${encodeURIComponent(filename)}`);
-      if (!response.ok) throw new Error("Failed to download");
+      if (!response.ok) throw new Error();
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -176,7 +272,7 @@ export function Settings() {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      toast({ title: "Download started", description: filename });
+      toast({ title: "Download started" });
     } catch {
       toast({ title: "Download failed", variant: "destructive" });
     }
@@ -184,31 +280,32 @@ export function Settings() {
 
   async function handleRestoreAutoBackup(filename: string) {
     if (!confirm(`Restore from "${filename}"? This will replace ALL existing data.`)) return;
-
     setRestoringFile(filename);
     try {
       const response = await fetch(`/api/backup/auto-backups/${encodeURIComponent(filename)}`);
-      if (!response.ok) throw new Error("Failed to fetch backup");
+      if (!response.ok) throw new Error();
       const data = await response.json();
       await importMutation.mutateAsync({ data });
       queryClient.invalidateQueries();
-      toast({ title: "Restore successful", description: `Data restored from ${filename}` });
+      toast({ title: "Restore successful" });
     } catch {
-      toast({ title: "Restore failed", description: "Could not restore from backup.", variant: "destructive" });
+      toast({ title: "Restore failed", variant: "destructive" });
     } finally {
       setRestoringFile(null);
     }
   }
 
   async function handleDeleteAutoBackup(filename: string) {
-    if (!confirm(`Delete backup "${filename}"? This cannot be undone.`)) return;
+    if (!confirm(`Delete backup "${filename}"?`)) return;
     try {
       await deleteBackup.mutateAsync(filename);
-      toast({ title: "Backup deleted", description: filename });
+      toast({ title: "Backup deleted" });
     } catch {
       toast({ title: "Delete failed", variant: "destructive" });
     }
   }
+
+  const canEditProfile = isMaster || isAdmin;
 
   return (
     <div className="space-y-6">
@@ -216,279 +313,197 @@ export function Settings() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Building2 className="w-5 h-5" />
-            Business Profile
-          </CardTitle>
-          <CardDescription>
-            This information appears on every invoice you print or download as PDF.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid sm:grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <Label>Business Name</Label>
-              <Input value={localProfile.name} onChange={e => setLocalProfile(p => ({ ...p, name: e.target.value }))} placeholder="Your Business Name" />
+          <div className="flex items-start justify-between gap-4">
+            <div className="space-y-1">
+              <CardTitle className="flex items-center gap-2">
+                <Building2 className="w-5 h-5" />
+                Business Profile
+              </CardTitle>
+              <CardDescription>
+                This information appears on every invoice you print or download as PDF.
+              </CardDescription>
             </div>
-            <div className="space-y-1.5">
-              <Label>GSTIN</Label>
-              <Input value={localProfile.gstin} onChange={e => setLocalProfile(p => ({ ...p, gstin: e.target.value }))} placeholder="22AAAAA0000A1Z5" />
-            </div>
-            <div className="space-y-1.5">
-              <Label>FSSAI Number <span className="text-muted-foreground font-normal text-xs">(optional, for food businesses)</span></Label>
-              <Input value={localProfile.fssaiNumber} onChange={e => setLocalProfile(p => ({ ...p, fssaiNumber: e.target.value }))} placeholder="12345678901234" />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Address</Label>
-              <Input value={localProfile.address} onChange={e => setLocalProfile(p => ({ ...p, address: e.target.value }))} placeholder="Street / Area" />
-            </div>
-            <div className="space-y-1.5">
-              <Label>City, State - PIN</Label>
-              <Input value={localProfile.city} onChange={e => setLocalProfile(p => ({ ...p, city: e.target.value }))} placeholder="Mumbai, Maharashtra - 400001" />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Phone</Label>
-              <Input value={localProfile.phone} onChange={e => setLocalProfile(p => ({ ...p, phone: e.target.value }))} placeholder="+91 98765 43210" />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Email</Label>
-              <Input value={localProfile.email} onChange={e => setLocalProfile(p => ({ ...p, email: e.target.value }))} placeholder="you@business.com" />
-            </div>
-          </div>
-
-          <div className="border-t pt-4">
-            <p className="text-sm font-medium text-muted-foreground mb-3">Bank Details (shown on invoice)</p>
-            <div className="grid sm:grid-cols-3 gap-4">
-              <div className="space-y-1.5">
-                <Label>Bank Name</Label>
-                <Input value={localProfile.bankName} onChange={e => setLocalProfile(p => ({ ...p, bankName: e.target.value }))} placeholder="State Bank of India" />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Account Number</Label>
-                <Input value={localProfile.bankAccount} onChange={e => setLocalProfile(p => ({ ...p, bankAccount: e.target.value }))} placeholder="1234567890" />
-              </div>
-              <div className="space-y-1.5">
-                <Label>IFSC Code</Label>
-                <Input value={localProfile.bankIfsc} onChange={e => setLocalProfile(p => ({ ...p, bankIfsc: e.target.value }))} placeholder="SBIN0001234" />
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label>Terms & Conditions</Label>
-            <Input value={localProfile.termsAndConditions} onChange={e => setLocalProfile(p => ({ ...p, termsAndConditions: e.target.value }))} placeholder="Goods once sold will not be taken back. E & O.E." />
-          </div>
-
-          <div className="border-t pt-4">
-            <div className="grid sm:grid-cols-2 gap-4 items-end">
-              <div className="space-y-1.5">
-                <Label>Invoice Print Page Size</Label>
-                <Select value={localProfile.printPageSize} onValueChange={value => setLocalProfile(p => ({ ...p, printPageSize: value as "A4" | "A5" }))}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="A4">A4 - Standard full-page invoice</SelectItem>
-                    <SelectItem value="A5">A5 - Compact half-page invoice</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                This controls the page size used by invoice Print and Download PDF.
-              </p>
-            </div>
-          </div>
-
-          <div className="border-t pt-4">
-            <div className="grid sm:grid-cols-2 gap-4 items-end">
-              <div className="space-y-1.5">
-                <Label>Financial Year Start Month</Label>
-                <Select
-                  value={String(localProfile.fyStartMonth ?? 4)}
-                  onValueChange={value => setLocalProfile(p => ({ ...p, fyStartMonth: Number(value) }))}
+            <div className="flex items-center gap-2 shrink-0">
+              {isLocked && (
+                <Badge variant="outline" className="text-amber-600 border-amber-300 bg-amber-50">
+                  <Lock className="w-3 h-3 mr-1" />
+                  Locked
+                </Badge>
+              )}
+              {isMaster && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => toggleLock.mutate()}
+                  disabled={toggleLock.isPending}
                 >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {[
-                      { v: 1, label: "January (Calendar Year)" },
-                      { v: 4, label: "April (India Standard)" },
-                      { v: 7, label: "July" },
-                      { v: 10, label: "October" },
-                      { v: 2, label: "February" },
-                      { v: 3, label: "March" },
-                      { v: 5, label: "May" },
-                      { v: 6, label: "June" },
-                      { v: 8, label: "August" },
-                      { v: 9, label: "September" },
-                      { v: 11, label: "November" },
-                      { v: 12, label: "December" },
-                    ].map(m => (
-                      <SelectItem key={m.v} value={String(m.v)}>{m.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Sets which month the financial year begins. Default is April for Indian businesses.
-              </p>
+                  {isLocked ? <Unlock className="w-4 h-4 mr-1" /> : <Lock className="w-4 h-4 mr-1" />}
+                  {isLocked ? "Unlock" : "Lock"} Settings
+                </Button>
+              )}
             </div>
-          </div>
-
-          <Button onClick={handleProfileSave} className="w-full sm:w-auto">
-            <Save className="w-4 h-4 mr-2" />
-            Save Business Profile
-          </Button>
-        </CardContent>
-      </Card>
-
-      <div className="grid md:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Download className="w-5 h-5" />
-              Export Database
-            </CardTitle>
-            <CardDescription>
-              Download a complete backup of all your data as a JSON file.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button onClick={handleExport} disabled={isExporting} className="w-full">
-              {isExporting ? "Exporting..." : "Download Backup"}
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Upload className="w-5 h-5" />
-              Import Database
-            </CardTitle>
-            <CardDescription>
-              Restore your data from a previously exported JSON backup file. Warning: This will replace all existing data.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button onClick={handleImport} disabled={importing} variant="outline" className="w-full">
-              {importing ? "Importing..." : "Upload Backup File"}
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card>
-        <CardHeader className="flex flex-row items-start justify-between gap-4">
-          <div className="space-y-1">
-            <CardTitle className="flex items-center gap-2">
-              <Clock className="w-5 h-5" />
-              Auto Backups
-            </CardTitle>
-            <CardDescription>
-              The server automatically saves a backup every 24 hours. Up to 10 backups are kept. You can also trigger a backup manually at any time.
-            </CardDescription>
-          </div>
-          <div className="flex gap-2 shrink-0">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => refetchBackups()}
-              disabled={isRefetchingBackups}
-            >
-              <RefreshCw className={`w-4 h-4 mr-1 ${isRefetchingBackups ? "animate-spin" : ""}`} />
-              Refresh
-            </Button>
-            <Button
-              size="sm"
-              onClick={handleTriggerBackup}
-              disabled={triggerBackup.isPending}
-            >
-              <Zap className="w-4 h-4 mr-1" />
-              {triggerBackup.isPending ? "Saving..." : "Backup Now"}
-            </Button>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          {autoBackupsData?.backupDir && (
-            <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 rounded-md px-3 py-2">
-              <FolderOpen className="w-3.5 h-3.5 shrink-0" />
-              <span className="font-mono break-all">{autoBackupsData.backupDir}</span>
-            </div>
-          )}
-
-          {isLoadingBackups ? (
-            <div className="space-y-2">
-              {[1, 2, 3].map(i => (
-                <div key={i} className="h-14 bg-muted animate-pulse rounded-md" />
-              ))}
-            </div>
-          ) : !autoBackupsData?.backups?.length ? (
-            <div className="flex flex-col items-center justify-center py-10 text-muted-foreground gap-2">
-              <HardDrive className="w-8 h-8 opacity-40" />
-              <p className="text-sm">No auto-backups yet.</p>
-              <Button variant="outline" size="sm" onClick={handleTriggerBackup} disabled={triggerBackup.isPending}>
-                <Zap className="w-4 h-4 mr-1" />
-                Create First Backup
-              </Button>
-            </div>
+          {isLoadingSettings ? (
+            <div className="space-y-2">{[1, 2, 3].map(i => <div key={i} className="h-10 bg-muted animate-pulse rounded" />)}</div>
           ) : (
-            <div className="divide-y rounded-md border overflow-hidden">
-              {autoBackupsData.backups.map((backup, index) => (
-                <div
-                  key={backup.filename}
-                  className="flex flex-col sm:flex-row sm:items-center gap-3 px-4 py-3 bg-background hover:bg-muted/30 transition-colors"
-                >
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-sm font-medium font-mono truncate">{backup.filename}</span>
-                      {index === 0 && (
-                        <Badge variant="secondary" className="text-xs shrink-0">Latest</Badge>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <Clock className="w-3 h-3" />
-                        {formatDate(backup.createdAt)}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <HardDrive className="w-3 h-3" />
-                        {formatBytes(backup.sizeBytes)}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDownloadAutoBackup(backup.filename)}
-                    >
-                      <Download className="w-3.5 h-3.5 mr-1" />
-                      Download
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleRestoreAutoBackup(backup.filename)}
-                      disabled={restoringFile === backup.filename}
-                    >
-                      <RotateCcw className="w-3.5 h-3.5 mr-1" />
-                      {restoringFile === backup.filename ? "Restoring..." : "Restore"}
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                      onClick={() => handleDeleteAutoBackup(backup.filename)}
-                      disabled={deleteBackup.isPending}
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </Button>
-                  </div>
+            <>
+              {isAdmin && !isMaster && (
+                <div className="rounded-md bg-blue-50 border border-blue-200 px-3 py-2 text-sm text-blue-700">
+                  As Admin, you can update Phone, Address, and Email only. Business Name, GST, and FSSAI are managed by the Master.
                 </div>
-              ))}
-            </div>
+              )}
+              {isSalesman && (
+                <div className="rounded-md bg-muted px-3 py-2 text-sm text-muted-foreground">
+                  Business settings can only be modified by Admin or Master.
+                </div>
+              )}
+
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label>Business Name {!isFieldEditable("master") && <span className="text-xs text-muted-foreground">(Master only)</span>}</Label>
+                  <Input
+                    value={localSettings.businessName}
+                    onChange={e => set("businessName", e.target.value)}
+                    placeholder="Your Business Name"
+                    disabled={!isFieldEditable("master")}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>GSTIN {!isFieldEditable("master") && <span className="text-xs text-muted-foreground">(Master only)</span>}</Label>
+                  <Input
+                    value={localSettings.gstin}
+                    onChange={e => set("gstin", e.target.value)}
+                    placeholder="22AAAAA0000A1Z5"
+                    disabled={!isFieldEditable("master")}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>FSSAI Number <span className="text-muted-foreground font-normal text-xs">(optional)</span> {!isFieldEditable("master") && <span className="text-xs text-muted-foreground">(Master only)</span>}</Label>
+                  <Input
+                    value={localSettings.fssaiNumber}
+                    onChange={e => set("fssaiNumber", e.target.value)}
+                    placeholder="12345678901234"
+                    disabled={!isFieldEditable("master")}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Address</Label>
+                  <Input
+                    value={localSettings.address}
+                    onChange={e => set("address", e.target.value)}
+                    placeholder="Street / Area"
+                    disabled={!isFieldEditable("admin")}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>City, State - PIN {!isFieldEditable("master") && <span className="text-xs text-muted-foreground">(Master only)</span>}</Label>
+                  <Input
+                    value={localSettings.city}
+                    onChange={e => set("city", e.target.value)}
+                    placeholder="Mumbai, Maharashtra - 400001"
+                    disabled={!isFieldEditable("master")}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Phone</Label>
+                  <Input
+                    value={localSettings.phone}
+                    onChange={e => set("phone", e.target.value)}
+                    placeholder="+91 98765 43210"
+                    disabled={!isFieldEditable("admin")}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Email</Label>
+                  <Input
+                    value={localSettings.email}
+                    onChange={e => set("email", e.target.value)}
+                    placeholder="you@business.com"
+                    disabled={!isFieldEditable("admin")}
+                  />
+                </div>
+              </div>
+
+              {isMaster && (
+                <>
+                  <div className="border-t pt-4">
+                    <p className="text-sm font-medium text-muted-foreground mb-3">Bank Details (shown on invoice)</p>
+                    <div className="grid sm:grid-cols-3 gap-4">
+                      <div className="space-y-1.5">
+                        <Label>Bank Name</Label>
+                        <Input value={localSettings.bankName} onChange={e => set("bankName", e.target.value)} placeholder="State Bank of India" disabled={isLocked} />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label>Account Number</Label>
+                        <Input value={localSettings.bankAccount} onChange={e => set("bankAccount", e.target.value)} placeholder="1234567890" disabled={isLocked} />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label>IFSC Code</Label>
+                        <Input value={localSettings.bankIfsc} onChange={e => set("bankIfsc", e.target.value)} placeholder="SBIN0001234" disabled={isLocked} />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label>Terms & Conditions</Label>
+                    <Input value={localSettings.termsAndConditions} onChange={e => set("termsAndConditions", e.target.value)} placeholder="Goods once sold will not be taken back." disabled={isLocked} />
+                  </div>
+
+                  <div className="border-t pt-4">
+                    <div className="grid sm:grid-cols-2 gap-4 items-end">
+                      <div className="space-y-1.5">
+                        <Label>Invoice Print Page Size</Label>
+                        <Select value={localSettings.printPageSize} onValueChange={v => set("printPageSize", v)} disabled={isLocked}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="A4">A4 - Standard full-page invoice</SelectItem>
+                            <SelectItem value="A5">A5 - Compact half-page invoice</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <p className="text-sm text-muted-foreground">Controls the page size for invoice print and PDF.</p>
+                    </div>
+                  </div>
+
+                  <div className="border-t pt-4">
+                    <div className="grid sm:grid-cols-2 gap-4 items-end">
+                      <div className="space-y-1.5">
+                        <Label>Financial Year Start Month</Label>
+                        <Select value={String(localSettings.fyStartMonth ?? 4)} onValueChange={v => set("fyStartMonth", v)} disabled={isLocked}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            {[
+                              { v: 1, label: "January (Calendar Year)" },
+                              { v: 4, label: "April (India Standard)" },
+                              { v: 7, label: "July" },
+                              { v: 10, label: "October" },
+                              { v: 2, label: "February" },
+                              { v: 3, label: "March" },
+                              { v: 5, label: "May" },
+                              { v: 6, label: "June" },
+                              { v: 8, label: "August" },
+                              { v: 9, label: "September" },
+                              { v: 11, label: "November" },
+                              { v: 12, label: "December" },
+                            ].map(m => <SelectItem key={m.v} value={String(m.v)}>{m.label}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <p className="text-sm text-muted-foreground">Sets which month the financial year begins.</p>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {canEditProfile && (
+                <Button onClick={handleSaveProfile} className="w-full sm:w-auto" disabled={saveSettings.isPending || (isMaster && isLocked)}>
+                  <Save className="w-4 h-4 mr-2" />
+                  {saveSettings.isPending ? "Saving..." : "Save Business Profile"}
+                </Button>
+              )}
+            </>
           )}
         </CardContent>
       </Card>
@@ -496,16 +511,154 @@ export function Settings() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Database className="w-5 h-5" />
-            About BillingPro
+            <Key className="w-5 h-5" />
+            Change My Password
           </CardTitle>
+          <CardDescription>Update your own login password.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button variant="outline" onClick={() => setShowChangePassword(true)}>
+            Change Password
+          </Button>
+        </CardContent>
+      </Card>
+
+      {isMaster && (
+        <div className="grid md:grid-cols-2 gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2"><Download className="w-5 h-5" />Export Database</CardTitle>
+              <CardDescription>Download a complete backup of all your data as a JSON file.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={handleExport} disabled={isExporting} className="w-full">
+                {isExporting ? "Exporting..." : "Download Backup"}
+              </Button>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2"><Upload className="w-5 h-5" />Import Database</CardTitle>
+              <CardDescription>Restore your data from a previously exported JSON backup file. Warning: This will replace all existing data.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={handleImport} disabled={importing} variant="outline" className="w-full">
+                {importing ? "Importing..." : "Upload Backup File"}
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {isMaster && (
+        <Card>
+          <CardHeader className="flex flex-row items-start justify-between gap-4">
+            <div className="space-y-1">
+              <CardTitle className="flex items-center gap-2"><Clock className="w-5 h-5" />Auto Backups</CardTitle>
+              <CardDescription>The server automatically saves a backup every 24 hours. Up to 10 backups are kept.</CardDescription>
+            </div>
+            <div className="flex gap-2 shrink-0">
+              <Button variant="outline" size="sm" onClick={() => refetchBackups()} disabled={isRefetchingBackups}>
+                <RefreshCw className={`w-4 h-4 mr-1 ${isRefetchingBackups ? "animate-spin" : ""}`} />
+                Refresh
+              </Button>
+              <Button size="sm" onClick={handleTriggerBackup} disabled={triggerBackup.isPending}>
+                <Zap className="w-4 h-4 mr-1" />
+                {triggerBackup.isPending ? "Saving..." : "Backup Now"}
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {autoBackupsData?.backupDir && (
+              <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 rounded-md px-3 py-2">
+                <FolderOpen className="w-3.5 h-3.5 shrink-0" />
+                <span className="font-mono break-all">{autoBackupsData.backupDir}</span>
+              </div>
+            )}
+            {isLoadingBackups ? (
+              <div className="space-y-2">{[1, 2, 3].map(i => <div key={i} className="h-14 bg-muted animate-pulse rounded-md" />)}</div>
+            ) : !autoBackupsData?.backups?.length ? (
+              <div className="flex flex-col items-center justify-center py-10 text-muted-foreground gap-2">
+                <HardDrive className="w-8 h-8 opacity-40" />
+                <p className="text-sm">No auto-backups yet.</p>
+                <Button variant="outline" size="sm" onClick={handleTriggerBackup} disabled={triggerBackup.isPending}>
+                  <Zap className="w-4 h-4 mr-1" />Create First Backup
+                </Button>
+              </div>
+            ) : (
+              <div className="divide-y rounded-md border overflow-hidden">
+                {autoBackupsData.backups.map((backup, index) => (
+                  <div key={backup.filename} className="flex flex-col sm:flex-row sm:items-center gap-3 px-4 py-3 bg-background hover:bg-muted/30 transition-colors">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm font-medium font-mono truncate">{backup.filename}</span>
+                        {index === 0 && <Badge variant="secondary" className="text-xs shrink-0">Latest</Badge>}
+                      </div>
+                      <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                        <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{formatDate(backup.createdAt)}</span>
+                        <span className="flex items-center gap-1"><HardDrive className="w-3 h-3" />{formatBytes(backup.sizeBytes)}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Button variant="outline" size="sm" onClick={() => handleDownloadAutoBackup(backup.filename)}>
+                        <Download className="w-3.5 h-3.5 mr-1" />Download
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => handleRestoreAutoBackup(backup.filename)} disabled={restoringFile === backup.filename}>
+                        <RotateCcw className="w-3.5 h-3.5 mr-1" />{restoringFile === backup.filename ? "Restoring..." : "Restore"}
+                      </Button>
+                      <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => handleDeleteAutoBackup(backup.filename)} disabled={deleteBackup.isPending}>
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2"><Database className="w-5 h-5" />About BillingPro</CardTitle>
         </CardHeader>
         <CardContent className="text-sm text-muted-foreground space-y-2">
           <p>BillingPro is an offline billing application designed for small businesses and shops.</p>
           <p>Features: Product management, invoicing with GST, customer tracking, profit analytics, financial year reports, and data backup/restore.</p>
-          <p>Version 1.0.0</p>
+          <p>Version 1.0.0 — RBAC enabled</p>
         </CardContent>
       </Card>
+
+      <Dialog open={showChangePassword} onOpenChange={setShowChangePassword}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Key className="w-5 h-5" />
+              Change Password
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <Label>Current Password</Label>
+              <Input type="password" value={currentPass} onChange={e => setCurrentPass(e.target.value)} placeholder="Enter current password" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>New Password</Label>
+              <Input type="password" value={newPass} onChange={e => setNewPass(e.target.value)} placeholder="Min 4 characters" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Confirm New Password</Label>
+              <Input type="password" value={confirmPass} onChange={e => setConfirmPass(e.target.value)} placeholder="Re-enter new password" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowChangePassword(false)}>Cancel</Button>
+            <Button onClick={handlePasswordChange} disabled={changePassword.isPending || newPass.length < 4}>
+              {changePassword.isPending ? "Changing..." : "Change Password"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

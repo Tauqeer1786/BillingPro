@@ -1,10 +1,17 @@
 import app from "./app";
 import { logger } from "./lib/logger";
-import { initializeDb } from "@workspace/db";
+import { initializeDb, hasMasterUser, insertMasterUser } from "@workspace/db";
 import { startBackupScheduler } from "./lib/backup-scheduler";
+import bcrypt from "bcryptjs";
 
 initializeDb();
 startBackupScheduler();
+
+if (!hasMasterUser()) {
+  const hash = bcrypt.hashSync("master123", 10);
+  insertMasterUser("master", hash);
+  logger.info("Created default master user: username=master password=master123");
+}
 
 const rawPort = process.env["PORT"] ?? "3001";
 

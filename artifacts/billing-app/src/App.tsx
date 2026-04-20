@@ -15,41 +15,61 @@ import { Settings } from "@/pages/Settings";
 import { Purchases } from "@/pages/Purchases";
 import { NewPurchase } from "@/pages/NewPurchase";
 import { BulkAddProducts } from "@/pages/BulkAddProducts";
+import { UserManagement } from "@/pages/UserManagement";
+import { Login } from "@/pages/Login";
+import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 
 const queryClient = new QueryClient();
 
 function Router() {
+  const { user, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-muted-foreground">Loading...</div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Login />;
+  }
+
   return (
-    <Switch>
-      <Route path="/" component={Dashboard} />
-      <Route path="/products" component={Products} />
-      <Route path="/products/bulk-add" component={BulkAddProducts} />
-      <Route path="/customers" component={Customers} />
-      <Route path="/invoices" component={Invoices} />
-      <Route path="/invoices/new" component={NewInvoice} />
-      <Route path="/invoices/:id">
-        {(params) => <InvoiceDetail id={parseInt(params.id)} />}
-      </Route>
-      <Route path="/purchases" component={Purchases} />
-      <Route path="/purchases/new" component={NewPurchase} />
-      <Route path="/reports" component={Reports} />
-      <Route path="/settings" component={Settings} />
-      <Route component={NotFound} />
-    </Switch>
+    <Layout>
+      <Switch>
+        <Route path="/" component={Dashboard} />
+        <Route path="/products" component={Products} />
+        <Route path="/products/bulk-add" component={BulkAddProducts} />
+        <Route path="/customers" component={Customers} />
+        <Route path="/invoices" component={Invoices} />
+        <Route path="/invoices/new" component={NewInvoice} />
+        <Route path="/invoices/:id">
+          {(params) => <InvoiceDetail id={parseInt(params.id)} />}
+        </Route>
+        <Route path="/purchases" component={Purchases} />
+        <Route path="/purchases/new" component={NewPurchase} />
+        <Route path="/reports" component={Reports} />
+        <Route path="/settings" component={Settings} />
+        <Route path="/users" component={UserManagement} />
+        <Route component={NotFound} />
+      </Switch>
+    </Layout>
   );
 }
 
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-          <Layout>
+      <AuthProvider>
+        <TooltipProvider>
+          <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
             <Router />
-          </Layout>
-        </WouterRouter>
-        <Toaster />
-      </TooltipProvider>
+          </WouterRouter>
+          <Toaster />
+        </TooltipProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }

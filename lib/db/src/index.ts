@@ -111,7 +111,43 @@ export function initializeDb() {
       cost_price REAL NOT NULL,
       total_cost REAL NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS users (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      username TEXT NOT NULL UNIQUE,
+      password_hash TEXT NOT NULL,
+      role TEXT NOT NULL CHECK(role IN ('master', 'admin', 'salesman')),
+      is_active INTEGER NOT NULL DEFAULT 1,
+      created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+      created_by INTEGER REFERENCES users(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS salesman_permissions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      can_bill INTEGER NOT NULL DEFAULT 1,
+      can_view_reports INTEGER NOT NULL DEFAULT 0,
+      can_edit_invoices INTEGER NOT NULL DEFAULT 0,
+      can_access_inventory INTEGER NOT NULL DEFAULT 0
+    );
+
+    CREATE TABLE IF NOT EXISTS business_settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL DEFAULT '',
+      is_locked INTEGER NOT NULL DEFAULT 0
+    );
   `);
+
+}
+
+export function hasMasterUser(): boolean {
+  return !!sqlite.prepare("SELECT id FROM users WHERE role = 'master' LIMIT 1").get();
+}
+
+export function insertMasterUser(username: string, passwordHash: string): void {
+  sqlite.prepare(
+    "INSERT OR IGNORE INTO users (username, password_hash, role, is_active, created_at) VALUES (?, ?, 'master', 1, unixepoch())"
+  ).run(username, passwordHash);
 }
 
 export * from "./schema";
