@@ -14,6 +14,7 @@ export interface BusinessProfile {
   bankIfsc: string;
   termsAndConditions: string;
   printPageSize: "A4" | "A5";
+  printOrientation: "portrait" | "landscape";
   fyStartMonth: number;
 }
 
@@ -30,6 +31,7 @@ const DEFAULT_PROFILE: BusinessProfile = {
   bankIfsc: "",
   termsAndConditions: "Goods once sold will not be taken back. E & O.E.",
   printPageSize: "A4",
+  printOrientation: "portrait",
   fyStartMonth: 4,
 };
 
@@ -47,6 +49,7 @@ function settingsToProfile(settings: Record<string, string>): BusinessProfile {
     bankIfsc: settings.bankIfsc || DEFAULT_PROFILE.bankIfsc,
     termsAndConditions: settings.termsAndConditions || DEFAULT_PROFILE.termsAndConditions,
     printPageSize: (settings.printPageSize as "A4" | "A5") || DEFAULT_PROFILE.printPageSize,
+    printOrientation: (settings.printOrientation as "portrait" | "landscape") || DEFAULT_PROFILE.printOrientation,
     fyStartMonth: settings.fyStartMonth ? parseInt(settings.fyStartMonth) : DEFAULT_PROFILE.fyStartMonth,
   };
 }
@@ -65,6 +68,7 @@ function profileToSettings(profile: Partial<BusinessProfile>): Record<string, st
   if (profile.bankIfsc !== undefined) settings.bankIfsc = profile.bankIfsc;
   if (profile.termsAndConditions !== undefined) settings.termsAndConditions = profile.termsAndConditions;
   if (profile.printPageSize !== undefined) settings.printPageSize = profile.printPageSize;
+  if (profile.printOrientation !== undefined) settings.printOrientation = profile.printOrientation;
   if (profile.fyStartMonth !== undefined) settings.fyStartMonth = String(profile.fyStartMonth);
   return settings;
 }

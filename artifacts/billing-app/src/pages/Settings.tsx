@@ -69,6 +69,7 @@ const PROFILE_DEFAULTS = {
   bankIfsc: "",
   termsAndConditions: "",
   printPageSize: "A4",
+  printOrientation: "portrait",
   fyStartMonth: "4",
 };
 
@@ -161,6 +162,7 @@ export function Settings() {
       updates.bankIfsc = localSettings.bankIfsc;
       updates.termsAndConditions = localSettings.termsAndConditions;
       updates.printPageSize = localSettings.printPageSize;
+      updates.printOrientation = localSettings.printOrientation;
       updates.fyStartMonth = localSettings.fyStartMonth;
     }
     saveSettings.mutate(updates);
@@ -466,6 +468,22 @@ export function Settings() {
                         </Select>
                       </div>
                       <p className="text-sm text-muted-foreground">Controls the page size for invoice print and PDF.</p>
+                    </div>
+                  </div>
+
+                  <div className="border-t pt-4">
+                    <div className="grid sm:grid-cols-2 gap-4 items-end">
+                      <div className="space-y-1.5">
+                        <Label>Invoice Print Orientation</Label>
+                        <Select value={localSettings.printOrientation} onValueChange={v => set("printOrientation", v)} disabled={!isAdminEditable()}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="portrait">Portrait (vertical)</SelectItem>
+                            <SelectItem value="landscape">Landscape (horizontal)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <p className="text-sm text-muted-foreground">Controls the page orientation for invoice print and PDF.</p>
                     </div>
                   </div>
 

@@ -130,7 +130,7 @@ export function InvoiceDetail({ id }: { id: number }) {
           <style>
             * { margin: 0; padding: 0; box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
             body { font-family: Arial, sans-serif; font-size: ${isA5 ? "8px" : "9px"}; color: #111; background: #fff; padding: ${isA5 ? "8mm" : "10mm"}; }
-            @page { size: ${profile.printPageSize ?? "A4"}; margin: 0; }
+            @page { size: ${profile.printPageSize ?? "A4"} ${profile.printOrientation ?? "portrait"}; margin: 0; }
             @media print {
               body { padding: ${isA5 ? "8mm" : "10mm"} !important; }
             }
@@ -149,7 +149,7 @@ export function InvoiceDetail({ id }: { id: number }) {
 
   function handleDownloadPdf() {
     const isA5 = profile.printPageSize === "A5";
-    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: isA5 ? "a5" : "a4" });
+    const doc = new jsPDF({ orientation: profile.printOrientation === "landscape" ? "landscape" : "portrait", unit: "mm", format: isA5 ? "a5" : "a4" });
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
     const margin = isA5 ? 8 : 10;
