@@ -1,9 +1,9 @@
 import { customFetch, useGetInvoice, getGetInvoiceQueryKey, useDeleteInvoice, getListInvoicesQueryKey } from "@workspace/api-client-react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatCurrency, formatDate } from "@/lib/format";
-import { ArrowLeft, Download, Printer, Trash2 } from "lucide-react";
+import { ArrowLeft, Download, Printer, Trash2, Plus, X } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useBusinessProfile } from "@/hooks/use-business-profile";
 import { useRef, useState, useEffect } from "react";
@@ -68,6 +68,51 @@ export function InvoiceDetail({ id }: { id: number }) {
   useEffect(() => {
     if (invoice) setEditAmountPaid(String(invoice.amountPaid ?? 0));
   }, [invoice?.amountPaid]);
+
+  const paymentsQuery = useQuery({
+    queryKey: ["invoice-payments", id],
+    queryFn: () => customFetch(`/api/invoices/${id}/payments`) as Promise<Array<{ id: number; paymentDate: string; amount: number; paymentMode: string; notes: string | null; createdAt: string }>>,
+    enabled: !!id,
+  });
+
+  const today = new Date().toISOString().slice(0, 10);
+  const [payDate, setPayDate] = useState<string>(today);
+  const [payAmount, setPayAmount] = useState<string>("");
+  const [payMode, setPayMode] = useState<string>("cash");
+  const [payNotes, setPayNotes] = useState<string>("");
+
+  const addPayment = useMutation({
+    mutationFn: (body: { paymentDate: string; amount: number; paymentMode: string; notes: string }) =>
+      customFetch(`/api/invoices/${id}/payments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["invoice-payments", id] });
+      queryClient.invalidateQueries({ queryKey: getGetInvoiceQueryKey(id) });
+      queryClient.invalidateQueries({ queryKey: getListInvoicesQueryKey() });
+      setPayAmount("");
+      setPayNotes("");
+      setPayDate(new Date().toISOString().slice(0, 10));
+      toast({ title: "Payment recorded" });
+    },
+    onError: (e: unknown) => {
+      const msg = e instanceof Error ? e.message : "Could not record payment";
+      toast({ title: "Error", description: msg, variant: "destructive" });
+    },
+  });
+
+  const deletePayment = useMutation({
+    mutationFn: (paymentId: number) =>
+      customFetch(`/api/invoices/${id}/payments/${paymentId}`, { method: "DELETE" }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["invoice-payments", id] });
+      queryClient.invalidateQueries({ queryKey: getGetInvoiceQueryKey(id) });
+      queryClient.invalidateQueries({ queryKey: getListInvoicesQueryKey() });
+      toast({ title: "Payment removed" });
+    },
+  });
 
   const updateAmountPaid = useMutation({
     mutationFn: (amountPaid: number) =>
@@ -463,6 +508,126 @@ export function InvoiceDetail({ id }: { id: number }) {
         <span className={`text-sm font-semibold ${invoice.outstandingAmount <= 0 ? "text-green-600" : "text-orange-600"}`}>
           Outstanding: {formatCurrency(invoice.outstandingAmount)}
         </span>
+      </div>
+
+      <div className="print:hidden bg-white border rounded-lg p-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <h3 className="text-base font-semibold">Installment Payment History</h3>
+          <span className="text-xs text-muted-foreground">
+            {paymentsQuery.data?.length || 0} payment(s) recorded
+          </span>
+        </div>
+
+        {invoice.outstandingAmount > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-2 items-end p-3 bg-muted/30 border rounded-md">
+            <div className="md:col-span-3">
+              <label className="text-xs text-muted-foreground">Date</label>
+              <Input type="date" value={payDate} onChange={(e) => setPayDate(e.target.value)} className="h-9" />
+            </div>
+            <div className="md:col-span-3">
+              <label className="text-xs text-muted-foreground">Amount (₹)</label>
+              <Input
+                type="number"
+                min="0"
+                step="0.01"
+                max={invoice.outstandingAmount}
+                placeholder={`Max ${formatCurrency(invoice.outstandingAmount)}`}
+                value={payAmount}
+                onChange={(e) => setPayAmount(e.target.value)}
+                className="h-9"
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="text-xs text-muted-foreground">Mode</label>
+              <select
+                value={payMode}
+                onChange={(e) => setPayMode(e.target.value)}
+                className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+              >
+                <option value="cash">Cash</option>
+                <option value="upi">UPI</option>
+                <option value="bank_transfer">Bank Transfer</option>
+                <option value="cheque">Cheque</option>
+                <option value="card">Card</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <div className="md:col-span-3">
+              <label className="text-xs text-muted-foreground">Notes (optional)</label>
+              <Input value={payNotes} onChange={(e) => setPayNotes(e.target.value)} placeholder="e.g. UTR / Cheque #" className="h-9" />
+            </div>
+            <div className="md:col-span-1">
+              <Button
+                size="sm"
+                className="w-full h-9"
+                disabled={addPayment.isPending || !payAmount || parseFloat(payAmount) <= 0}
+                onClick={() => addPayment.mutate({
+                  paymentDate: payDate,
+                  amount: parseFloat(payAmount),
+                  paymentMode: payMode,
+                  notes: payNotes,
+                })}
+              >
+                <Plus className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {paymentsQuery.data && paymentsQuery.data.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="text-xs uppercase text-muted-foreground border-b">
+                <tr>
+                  <th className="text-left py-2 px-2">#</th>
+                  <th className="text-left py-2 px-2">Date</th>
+                  <th className="text-right py-2 px-2">Amount</th>
+                  <th className="text-left py-2 px-2">Mode</th>
+                  <th className="text-left py-2 px-2">Notes</th>
+                  <th className="text-right py-2 px-2"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {paymentsQuery.data.map((p, idx) => (
+                  <tr key={p.id} className="border-b last:border-0">
+                    <td className="py-2 px-2 text-muted-foreground">{paymentsQuery.data!.length - idx}</td>
+                    <td className="py-2 px-2">{formatDate(p.paymentDate)}</td>
+                    <td className="py-2 px-2 text-right font-medium">{formatCurrency(p.amount)}</td>
+                    <td className="py-2 px-2 capitalize">{p.paymentMode.replace(/_/g, " ")}</td>
+                    <td className="py-2 px-2 text-muted-foreground">{p.notes || "-"}</td>
+                    <td className="py-2 px-2 text-right">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                        onClick={() => {
+                          if (confirm(`Remove payment of ${formatCurrency(p.amount)} dated ${formatDate(p.paymentDate)}?`)) {
+                            deletePayment.mutate(p.id);
+                          }
+                        }}
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot className="border-t">
+                <tr>
+                  <td colSpan={2} className="py-2 px-2 text-right font-semibold">Total Paid:</td>
+                  <td className="py-2 px-2 text-right font-semibold">
+                    {formatCurrency(paymentsQuery.data.reduce((s, p) => s + p.amount, 0))}
+                  </td>
+                  <td colSpan={3}></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        ) : (
+          <div className="text-sm text-muted-foreground py-3 text-center border border-dashed rounded-md">
+            No installment payments recorded yet.
+          </div>
+        )}
       </div>
 
       <div className="bg-white border rounded-xl shadow-sm overflow-hidden">

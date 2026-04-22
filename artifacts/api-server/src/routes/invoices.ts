@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { eq, desc, sql, and, gte, lte } from "drizzle-orm";
-import { db, invoicesTable, invoiceItemsTable, productsTable, customersTable } from "@workspace/db";
+import { db, invoicesTable, invoiceItemsTable, productsTable, customersTable, invoicePaymentsTable } from "@workspace/db";
 import {
   ListInvoicesQueryParams,
   CreateInvoiceBody,
@@ -405,6 +405,108 @@ router.patch("/invoices/:id/amount-paid", async (req, res): Promise<void> => {
     amountPaid: invoice.amountPaid || 0,
     outstandingAmount: Math.max(0, invoice.grandTotal - (invoice.amountPaid || 0)),
   });
+});
+
+router.get("/invoices/:id/payments", async (req, res): Promise<void> => {
+  const invoiceId = Number(req.params.id);
+  if (!invoiceId) {
+    res.status(400).json({ error: "Invalid invoice id" });
+    return;
+  }
+  const payments = await db.select().from(invoicePaymentsTable)
+    .where(eq(invoicePaymentsTable.invoiceId, invoiceId))
+    .orderBy(desc(invoicePaymentsTable.paymentDate), desc(invoicePaymentsTable.id));
+  res.json(payments.map(p => ({
+    id: p.id,
+    invoiceId: p.invoiceId,
+    paymentDate: p.paymentDate,
+    amount: p.amount,
+    paymentMode: p.paymentMode,
+    notes: p.notes,
+    createdAt: p.createdAt.toISOString(),
+  })));
+});
+
+router.post("/invoices/:id/payments", async (req, res): Promise<void> => {
+  const invoiceId = Number(req.params.id);
+  if (!invoiceId) {
+    res.status(400).json({ error: "Invalid invoice id" });
+    return;
+  }
+  const { paymentDate, amount, paymentMode, notes } = req.body as {
+    paymentDate?: string; amount?: number; paymentMode?: string; notes?: string;
+  };
+  if (!paymentDate || typeof amount !== "number" || amount <= 0) {
+    res.status(400).json({ error: "paymentDate and a positive amount are required" });
+    return;
+  }
+
+  const [invoice] = await db.select().from(invoicesTable).where(eq(invoicesTable.id, invoiceId));
+  if (!invoice) {
+    res.status(404).json({ error: "Invoice not found" });
+    return;
+  }
+
+  const outstanding = Math.max(0, invoice.grandTotal - (invoice.amountPaid || 0));
+  if (outstanding <= 0) {
+    res.status(400).json({ error: "This invoice is already fully paid" });
+    return;
+  }
+  const cappedAmount = Math.min(amount, outstanding);
+
+  const [payment] = await db.insert(invoicePaymentsTable).values({
+    invoiceId,
+    paymentDate,
+    amount: Math.round(cappedAmount * 100) / 100,
+    paymentMode: paymentMode || "cash",
+    notes: notes || null,
+  }).returning();
+
+  const newAmountPaid = Math.round(((invoice.amountPaid || 0) + cappedAmount) * 100) / 100;
+  const newStatus: "paid" | "unpaid" = newAmountPaid >= invoice.grandTotal ? "paid" : "unpaid";
+  await db.update(invoicesTable)
+    .set({ amountPaid: newAmountPaid, paymentStatus: newStatus })
+    .where(eq(invoicesTable.id, invoiceId));
+
+  res.status(201).json({
+    id: payment.id,
+    invoiceId: payment.invoiceId,
+    paymentDate: payment.paymentDate,
+    amount: payment.amount,
+    paymentMode: payment.paymentMode,
+    notes: payment.notes,
+    createdAt: payment.createdAt.toISOString(),
+    invoiceAmountPaid: newAmountPaid,
+    invoiceOutstanding: Math.max(0, invoice.grandTotal - newAmountPaid),
+    invoicePaymentStatus: newStatus,
+  });
+});
+
+router.delete("/invoices/:id/payments/:paymentId", async (req, res): Promise<void> => {
+  const invoiceId = Number(req.params.id);
+  const paymentId = Number(req.params.paymentId);
+  if (!invoiceId || !paymentId) {
+    res.status(400).json({ error: "Invalid id" });
+    return;
+  }
+  const [payment] = await db.select().from(invoicePaymentsTable)
+    .where(and(eq(invoicePaymentsTable.id, paymentId), eq(invoicePaymentsTable.invoiceId, invoiceId)));
+  if (!payment) {
+    res.status(404).json({ error: "Payment not found" });
+    return;
+  }
+  const [invoice] = await db.select().from(invoicesTable).where(eq(invoicesTable.id, invoiceId));
+  if (!invoice) {
+    res.status(404).json({ error: "Invoice not found" });
+    return;
+  }
+  await db.delete(invoicePaymentsTable).where(eq(invoicePaymentsTable.id, paymentId));
+  const newAmountPaid = Math.max(0, Math.round(((invoice.amountPaid || 0) - payment.amount) * 100) / 100);
+  const newStatus: "paid" | "unpaid" = newAmountPaid >= invoice.grandTotal ? "paid" : "unpaid";
+  await db.update(invoicesTable)
+    .set({ amountPaid: newAmountPaid, paymentStatus: newStatus })
+    .where(eq(invoicesTable.id, invoiceId));
+  res.json({ success: true, invoiceAmountPaid: newAmountPaid, invoiceOutstanding: Math.max(0, invoice.grandTotal - newAmountPaid), invoicePaymentStatus: newStatus });
 });
 
 router.delete("/invoices/:id", async (req, res): Promise<void> => {
