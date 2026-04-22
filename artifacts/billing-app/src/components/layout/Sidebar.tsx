@@ -20,9 +20,10 @@ export function Sidebar() {
   const canViewReports = isMaster || isAdmin || (isSalesman && !!user?.permissions?.canViewReports);
   const canAccessInventory = isMaster || isAdmin || (isSalesman && !!user?.permissions?.canAccessInventory);
   const canBill = isMaster || isAdmin || (isSalesman && !!user?.permissions?.canBill);
+  const canAccessDashboard = isMaster || isAdmin || (isSalesman && !!user?.permissions?.canAccessDashboard);
 
   const navItems = [
-    { href: "/", label: "Dashboard", icon: LayoutDashboard, show: true },
+    { href: "/", label: "Dashboard", icon: LayoutDashboard, show: canAccessDashboard },
     { href: "/products", label: "Products", icon: Package, show: isAdmin || isMaster || canAccessInventory },
     { href: "/purchases", label: "Purchases", icon: ShoppingCart, show: isAdmin || isMaster || canAccessInventory },
     { href: "/customers", label: "Customers", icon: Users, show: isAdmin || isMaster || canBill },

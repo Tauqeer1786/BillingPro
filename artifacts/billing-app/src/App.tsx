@@ -21,8 +21,17 @@ import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 
 const queryClient = new QueryClient();
 
+function AccessDenied() {
+  return (
+    <div className="flex flex-col items-center justify-center py-20 text-muted-foreground gap-2">
+      <p className="text-lg">You do not have access to this page.</p>
+      <p className="text-sm">Please contact your administrator.</p>
+    </div>
+  );
+}
+
 function Router() {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, isMaster, isAdmin, isSalesman } = useAuth();
 
   if (isLoading) {
     return (
@@ -36,10 +45,12 @@ function Router() {
     return <Login />;
   }
 
+  const canDashboard = isMaster || isAdmin || (isSalesman && !!user.permissions?.canAccessDashboard);
+
   return (
     <Layout>
       <Switch>
-        <Route path="/" component={Dashboard} />
+        <Route path="/" component={canDashboard ? Dashboard : AccessDenied} />
         <Route path="/products" component={Products} />
         <Route path="/products/bulk-add" component={BulkAddProducts} />
         <Route path="/customers" component={Customers} />

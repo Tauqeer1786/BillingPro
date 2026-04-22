@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useListProducts, useCreateProduct, useUpdateProduct, useDeleteProduct, getListProductsQueryKey } from "@workspace/api-client-react";
+import { useListProducts, useCreateProduct, useUpdateProduct, useDeleteProduct, getListProductsQueryKey, customFetch } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -123,18 +123,9 @@ export function Products() {
     const cp = priceProduct.costPrice;
     const newMargin = cp > 0 ? ((sp - cp) / cp) * 100 : 0;
     try {
-      await updateMutation.mutateAsync({
-        id: priceProduct.id,
-        data: {
-          name: priceProduct.name,
-          alias: priceProduct.alias || undefined,
-          costPrice: cp,
-          marginPercent: parseFloat(newMargin.toFixed(4)),
-          gstPercent: priceProduct.gstPercent,
-          stock: priceProduct.stock,
-          hsn: priceProduct.hsn || undefined,
-          unit: priceProduct.unit || "pcs",
-        },
+      await customFetch(`/api/products/${priceProduct.id}`, {
+        method: "PUT",
+        body: JSON.stringify({ sellingPrice: sp }),
       });
       queryClient.invalidateQueries({ queryKey: getListProductsQueryKey() });
       toast({ title: "Selling price updated", description: `Margin set to ${newMargin.toFixed(2)}%` });

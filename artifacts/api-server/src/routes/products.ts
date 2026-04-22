@@ -117,15 +117,24 @@ router.put("/products/:id", async (req, res): Promise<void> => {
 
   const updateData: Record<string, unknown> = { ...parsed.data };
 
-  if (parsed.data.costPrice != null || parsed.data.marginPercent != null) {
+  const rawSellingPrice = (req.body as Record<string, unknown>).sellingPrice;
+  const explicitSellingPrice = typeof rawSellingPrice === "number" && rawSellingPrice >= 0 ? rawSellingPrice : null;
+
+  if (explicitSellingPrice != null || parsed.data.costPrice != null || parsed.data.marginPercent != null) {
     const [existing] = await db.select().from(productsTable).where(eq(productsTable.id, params.data.id));
     if (!existing) {
       res.status(404).json({ error: "Product not found" });
       return;
     }
     const cost = parsed.data.costPrice ?? existing.costPrice;
-    const margin = parsed.data.marginPercent ?? existing.marginPercent;
-    updateData.sellingPrice = Math.round(cost * (1 + margin / 100) * 100) / 100;
+    if (explicitSellingPrice != null) {
+      const sell = Math.round(explicitSellingPrice * 100) / 100;
+      updateData.sellingPrice = sell;
+      updateData.marginPercent = cost > 0 ? Math.round(((sell - cost) / cost) * 10000) / 100 : 0;
+    } else {
+      const margin = parsed.data.marginPercent ?? existing.marginPercent;
+      updateData.sellingPrice = Math.round(cost * (1 + margin / 100) * 100) / 100;
+    }
   }
 
   const [product] = await db.update(productsTable)
