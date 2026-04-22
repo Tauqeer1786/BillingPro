@@ -130,7 +130,7 @@ export function InvoiceDetail({ id }: { id: number }) {
           <style>
             * { margin: 0; padding: 0; box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
             body { font-family: Arial, sans-serif; font-size: ${isA5 ? "8px" : "9px"}; color: #111; background: #fff; padding: ${isA5 ? "8mm" : "10mm"}; }
-            @page { size: ${profile.printPageSize ?? "A4"} ${profile.printOrientation ?? "portrait"}; margin: 0; }
+            @page { margin: 0; }
             @media print {
               body { padding: ${isA5 ? "8mm" : "10mm"} !important; }
             }

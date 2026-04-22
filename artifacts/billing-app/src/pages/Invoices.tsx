@@ -327,7 +327,7 @@ export function Invoices() {
             <style>
               * { margin: 0; padding: 0; box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
               body { font-family: Arial, sans-serif; color: #111; background: #fff; }
-              @page { size: ${profile.printPageSize ?? "A4"} ${profile.printOrientation ?? "portrait"}; margin: 0; }
+              @page { margin: 0; }
             </style>
           </head>
           <body>${bodiesHtml}</body>

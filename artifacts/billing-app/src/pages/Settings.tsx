@@ -456,35 +456,9 @@ export function Settings() {
                   </div>
 
                   <div className="border-t pt-4">
-                    <div className="grid sm:grid-cols-2 gap-4 items-end">
-                      <div className="space-y-1.5">
-                        <Label>Invoice Print Page Size</Label>
-                        <Select value={localSettings.printPageSize} onValueChange={v => set("printPageSize", v)} disabled={!isAdminEditable()}>
-                          <SelectTrigger><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="A4">A4 - Standard full-page invoice</SelectItem>
-                            <SelectItem value="A5">A5 - Compact half-page invoice</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <p className="text-sm text-muted-foreground">Controls the page size for invoice print and PDF.</p>
-                    </div>
-                  </div>
-
-                  <div className="border-t pt-4">
-                    <div className="grid sm:grid-cols-2 gap-4 items-end">
-                      <div className="space-y-1.5">
-                        <Label>Invoice Print Orientation</Label>
-                        <Select value={localSettings.printOrientation} onValueChange={v => set("printOrientation", v)} disabled={!isAdminEditable()}>
-                          <SelectTrigger><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="portrait">Portrait (vertical)</SelectItem>
-                            <SelectItem value="landscape">Landscape (horizontal)</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <p className="text-sm text-muted-foreground">Controls the page orientation for invoice print and PDF.</p>
-                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      Page size and orientation are not locked — choose them freely from your computer's print dialog when printing an invoice.
+                    </p>
                   </div>
 
                   <div className="border-t pt-4">

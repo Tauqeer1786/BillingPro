@@ -283,7 +283,7 @@ export function Reports() {
     const totalProfit = psSummary.reduce((s, p) => s + p.totalProfit, 0);
     const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Product Summary</title>
       <style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:Arial,sans-serif;font-size:11px;color:#111;padding:12mm}
-      @page{size:A4;margin:0}@media print{body{padding:12mm}}</style></head><body>
+      @page{margin:0}@media print{body{padding:12mm}}</style></head><body>
       <div style="text-align:center;margin-bottom:12px">
         <div style="font-size:18px;font-weight:900">${safe(profile.name)}</div>
         ${profile.address ? `<div style="font-size:11px">${safe(profile.address)}</div>` : ""}
