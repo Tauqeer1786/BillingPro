@@ -193,8 +193,8 @@ export function InvoiceDetail({ id }: { id: number }) {
   }
 
   function handleDownloadPdf() {
-    const isA5 = profile.printPageSize === "A5";
-    const doc = new jsPDF({ orientation: profile.printOrientation === "landscape" ? "landscape" : "portrait", unit: "mm", format: isA5 ? "a5" : "a4" });
+    const isA5 = false;
+    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
     const margin = isA5 ? 8 : 10;
