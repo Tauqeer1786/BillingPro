@@ -125,6 +125,7 @@ export function initializeDb() {
     CREATE TABLE IF NOT EXISTS salesman_permissions (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      can_access_dashboard INTEGER NOT NULL DEFAULT 0,
       can_bill INTEGER NOT NULL DEFAULT 1,
       can_view_reports INTEGER NOT NULL DEFAULT 0,
       can_edit_invoices INTEGER NOT NULL DEFAULT 0,
@@ -138,6 +139,10 @@ export function initializeDb() {
     );
   `);
 
+  const permissionColumns = sqlite.prepare("PRAGMA table_info(salesman_permissions)").all() as Array<{ name: string }>;
+  if (!permissionColumns.some(column => column.name === "can_access_dashboard")) {
+    sqlite.exec("ALTER TABLE salesman_permissions ADD COLUMN can_access_dashboard INTEGER NOT NULL DEFAULT 0");
+  }
 }
 
 export function hasMasterUser(): boolean {

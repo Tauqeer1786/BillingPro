@@ -61,7 +61,7 @@ export function UserManagement() {
   const [newPass, setNewPass] = useState("");
   const [editPerms, setEditPerms] = useState<Partial<SalesmanPermissions>>({});
 
-  const { data: users = [], isLoading } = useQuery<UserRecord[]>({
+  const { data: users = [], isLoading, error: usersError } = useQuery<UserRecord[]>({
     queryKey: ["users"],
     queryFn: () => customFetch<UserRecord[]>("/api/users"),
   });
@@ -169,6 +169,14 @@ export function UserManagement() {
         <div className="space-y-3">
           {[1, 2, 3].map(i => <div key={i} className="h-16 bg-muted animate-pulse rounded-lg" />)}
         </div>
+      ) : usersError ? (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12 text-destructive gap-2">
+            <Users className="w-8 h-8 opacity-40" />
+            <p className="text-sm font-medium">Could not load users.</p>
+            <p className="text-xs text-muted-foreground">{usersError instanceof Error ? usersError.message : "Please sign in again."}</p>
+          </CardContent>
+        </Card>
       ) : visibleUsers.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12 text-muted-foreground gap-2">

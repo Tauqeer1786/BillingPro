@@ -1,0 +1,66 @@
+{
+  "name": "local-ledger-pro-desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Desktop shell for Local Ledger Pro",
+  "author": {
+    "name": "Local Ledger Pro",
+    "email": "support@localledgerpro.local"
+  },
+  "homepage": "https://localledgerpro.local",
+  "main": "src/main.cjs",
+  "scripts": {
+    "build": "pnpm --filter @workspace/api-server run build && BASE_PATH=/ pnpm --filter @workspace/billing-app run build",
+    "start": "electron .",
+    "dev": "pnpm run build && electron .",
+    "dist": "pnpm run build && electron-builder"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.10.0",
+    "bindings": "^1.5.0",
+    "file-uri-to-path": "^1.0.0",
+    "prebuild-install": "^7.1.1"
+  },
+  "devDependencies": {
+    "electron": "^38.3.0",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "com.localledger.pro",
+    "productName": "Local Ledger Pro",
+    "files": [
+      "src/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "../api-server/dist",
+        "to": "api-server"
+      },
+      {
+        "from": "../billing-app/dist/public",
+        "to": "billing-app"
+      }
+    ],
+    "directories": {
+      "output": "release"
+    },
+    "afterPack": "scripts/after-pack.cjs",
+    "artifactName": "Local-Ledger-Pro-${version}-${os}-${arch}.${ext}",
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "maintainer": "Local Ledger Pro <support@localledgerpro.local>",
+      "executableName": "local-ledger-pro",
+      "executableArgs": [
+        "--no-sandbox"
+      ],
+      "category": "Office"
+    },
+    "win": {
+      "target": "nsis"
+    }
+  }
+}
