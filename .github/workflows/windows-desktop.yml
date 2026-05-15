@@ -15,6 +15,9 @@ on:
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
 
+permissions:
+  contents: write
+
 jobs:
   build-windows:
     name: Build Windows installer
@@ -49,3 +52,16 @@ jobs:
           name: Local-Ledger-Pro-Windows-Installer
           path: artifacts/desktop-app/release/*.exe
           if-no-files-found: error
+
+      - name: Publish installer release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: windows-desktop-latest
+          name: Local Ledger Pro Windows Installer
+          body: |
+            Latest Windows installer built from `${{ github.sha }}`.
+
+            Download the `.exe` from Assets below.
+          files: artifacts/desktop-app/release/*.exe
+          make_latest: true
+          overwrite_files: true
